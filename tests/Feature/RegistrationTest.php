@@ -1,35 +1,51 @@
 <?php
 
-use Laravel\Fortify\Features;
-use Laravel\Jetstream\Jetstream;
+use App\Models\User;
 
 test('registration screen can be rendered', function () {
-    $response = $this->get('/register');
-
-    $response->assertStatus(200);
-})->skip(function () {
-    return ! Features::enabled(Features::registration());
-}, 'Registration support is not enabled.');
-
-test('registration screen cannot be rendered if support is disabled', function () {
-    $response = $this->get('/register');
-
-    $response->assertStatus(404);
-})->skip(function () {
-    return Features::enabled(Features::registration());
-}, 'Registration support is enabled.');
+    $this->get('/register')
+        ->assertOk()
+        ->assertSee('ユーザーID')
+        ->assertDontSee('メールアドレス');
+});
 
 test('new users can register', function () {
     $response = $this->post('/register', [
+        'login_id' => ' Test.User ',
         'name' => 'Test User',
-        'email' => 'test@example.com',
+        'organization_name' => 'テスト株式会社',
         'password' => 'password',
         'password_confirmation' => 'password',
-        'terms' => Jetstream::hasTermsAndPrivacyPolicyFeature(),
     ]);
 
     $this->assertAuthenticated();
     $response->assertRedirect(route('dashboard', absolute: false));
-})->skip(function () {
-    return ! Features::enabled(Features::registration());
-}, 'Registration support is not enabled.');
+
+    $user = User::query()->where('login_id', 'test.user')->firstOrFail();
+
+    expect($user->email)->toBeNull();
+    $this->assertDatabaseHas('organizations', [
+        'id' => $user->organization_id,
+        'name' => 'テスト株式会社',
+    ]);
+
+    $this->get(route('dashboard'))
+        ->assertOk()
+        ->assertSee('favicon.svg')
+        ->assertSee('テスト株式会社');
+});
+
+test('login ids are unique after normalization', function () {
+    User::factory()->create(['login_id' => 'test.user']);
+
+    $this->post('/register', [
+        'login_id' => 'TEST.USER',
+        'name' => 'Another User',
+        'organization_name' => '別会社',
+        'password' => 'password',
+        'password_confirmation' => 'password',
+    ])->assertSessionHasErrors('login_id');
+
+    $this->assertGuest();
+    $this->assertDatabaseCount('users', 1);
+});

@@ -36,15 +36,14 @@ P/L・B/S・C/F
 
 ただし、**v0.1では上記の会計機能全体は作らない。**
 
-v0.1の目的は次の3点に限定する。
+v0.1の目的は次の2点に限定する。
 
 ```text
 1. 予算・実績の明細データを入力してDBに保存する
 2. 保存したデータをSQL学習に利用できるようにする
-3. 保存したデータとマスタをExcelへ出力する
 ```
 
-Excel上での分析やPower BIでの分析はAccountaの外で手動で行う。
+保存したデータとマスタのExcel出力はv0.2で実装する。v0.1ではDBクライアントからデータを参照してSQLを学習する。
 
 ---
 
@@ -55,6 +54,8 @@ Excel上での分析やPower BIでの分析はAccountaの外で手動で行う�
 > Cursor は、このPart 1を実装すること。
 >
 > Part 2の将来構想は実装しないこと。
+>
+> ただし「11. Excel Export」は確定済みのv0.2仕様であり、v0.1では実装しない。
 
 ---
 
@@ -66,20 +67,29 @@ Excel上での分析やPower BIでの分析はAccountaの外で手動で行う�
 
 - Laravel 13
 - PHP 8.3以上
-- MySQL
+- MySQL 8.4 LTS
 - Composer
 - Node.js / npm
 - Blade
 - Tailwind CSS
 - Laravel Jetstream
 - Jetstream Livewire Stack
-- Laravel Excel (`maatwebsite/excel`)
 
 SPAは作らない。
 
 Vue / React / Inertia は使用しない。
 
 Jetstream は **Livewire Stack** を使用する。
+
+## 1.2 実行環境・サポート範囲
+
+- v0.1の正式サポートDBと完了判定環境は **MySQL 8.4 LTS** とする。
+- 当面のローカル開発ではPostgreSQLを使用してよい。ただし、DB固有のSQL・型・関数へ依存せず、最終的にMySQL 8.4でMigrationとFeature Testが通ることを必須とする。
+- v0.1はローカルまたはアクセス制限された非公開環境での利用を前提とし、一般公開運用は対象外とする。
+- アプリケーションのTimezoneは `Asia/Tokyo`、UI Localeは日本語とする。
+
+SQL学習目的でDBへ直接接続できるのは、DB全体を閲覧できることを理解した信頼済みの開発者・所有者に限る。
+LaravelのOrganization分離はWebアプリケーション経由のアクセスに対する境界であり、DB認証情報を持つ利用者に対する分離を保証しない。共有環境ではアプリ利用者へDB認証情報を公開しない。
 
 ---
 
@@ -102,8 +112,6 @@ cd accounta
 composer require laravel/jetstream
 php artisan jetstream:install livewire
 
-composer require maatwebsite/excel
-
 npm install
 npm run build
 ```
@@ -121,21 +129,6 @@ php artisan migrate
 2026年9月時点の前提:
 
 - Laravel Jetstream 5.x は Laravel 13 に対応
-- Laravel Excel 4.x は Laravel 13 / PHP 8.3以上に対応
-
-Laravel Excel利用に必要なPHP Extensionがローカル環境に存在することを確認する。
-
-主な要件:
-
-```text
-php_zip
-php_xml
-php_gd
-php_iconv
-php_simplexml
-php_xmlreader
-php_zlib
-```
 
 ---
 
@@ -168,10 +161,12 @@ login_id
 - ユーザー登録
 - ユーザーID + パスワードによるログイン
 - ログアウト
-- ログイン状態保持
+- Jetstream / Fortify標準のRemember Meによるログイン状態保持
 - プロフィールの表示名変更
 - パスワード変更
 - Jetstream標準のセッション管理
+
+`login_id` は登録後に変更できない。プロフィールで変更できるのは表示名 `name` のみとする。
 
 ## 3.3 v0.1で無効にするもの
 
@@ -181,10 +176,12 @@ login_id
 - メールアドレス認証
 - メールによるパスワードリセット
 - Two-Factor Authentication
+- Passkeys
 - API Token
 - Jetstream Teams
 - Terms / Privacy同意
 - Profile Photo
+- アカウント削除
 
 特に、**メールアドレス認証は絶対に有効化しないこと。**
 
@@ -198,17 +195,22 @@ Fortifyの認証識別子を `email` から `login_id` に変更する。
 
 ```php
 'username' => 'login_id',
+'lowercase_usernames' => true,
 ```
 
-登録・プロフィール更新・Validationも `login_id` を基準に変更する。
+登録・ログインのValidationは `login_id` を基準に変更する。プロフィール更新では `login_id` を変更しない。
 
 Jetstream / Fortifyが標準で要求するemail Validationが残らないようにする。
 
-`Features::emailVerification()` は無効。
+Fortifyで有効にするFeatureは以下だけとする。
 
-`Features::resetPasswords()` もv0.1では無効。
+```text
+Features::registration()
+Features::updateProfileInformation()
+Features::updatePasswords()
+```
 
-Two Factor Authenticationも無効。
+Email Verification、Password Reset、Two-Factor Authentication、Passkeysは無効とし、対応する画面・Routeも提供しない。Web画面は `web` GuardのSession認証を使用し、API RouteやToken発行機能は提供しない。
 
 ## 3.5 users テーブル
 
@@ -217,9 +219,9 @@ Two Factor Authenticationも無効。
 | Column | Type / Rule | Description |
 |---|---|---|
 | id | bigint PK | 内部PK |
-| organization_id | FK, nullable during creation if needed | 所属Organization |
-| login_id | varchar, unique, not null | ログイン用ユーザーID |
-| name | varchar, not null | 表示名 |
+| organization_id | FK, not null | 所属Organization |
+| login_id | varchar(50), unique, not null | ログイン用ユーザーID |
+| name | varchar(100), not null | 表示名 |
 | email | varchar, nullable | 将来利用。v0.1ではUIから入力させない |
 | email_verified_at | timestamp, nullable | v0.1では常に未使用 |
 | password | varchar, not null | Hash済みPassword |
@@ -246,12 +248,18 @@ v0.1の新規ユーザー登録では以下を入力する。
 ```text
 Organization作成
         ↓
-User作成
-        ↓
-users.organization_idへ設定
+作成したOrganization IDを指定してUser作成
 ```
 
-同じ `login_id` は登録できない。
+登録時の入力規則:
+
+- `login_id`: trim後3～50文字。ASCII英小文字・数字・ピリオド・アンダースコア・ハイフンのみ。先頭は英小文字または数字
+- `login_id`: 保存・検索前に小文字へ正規化し、大文字小文字を区別せずUnique
+- `name`: trim後1～100文字
+- `organization_name`: trim後1～100文字。同名Organizationは許可
+- `password`: Jetstream / FortifyのPassword Ruleを使用し、確認入力を必須とする
+
+同じ `login_id` は登録できない。登録失敗時はOrganizationとUserの両方をRollbackし、OrganizationなしのUserやUserなしのOrganizationを残さない。リクエストから `organization_id`、Organizationの `type`、`fiscal_year_start_month` を受け取らない。
 
 ---
 
@@ -268,8 +276,8 @@ v0.1では、1ユーザーは1つのOrganizationに所属する。
 | Column | Type / Rule | Description |
 |---|---|---|
 | id | bigint PK | Primary Key |
-| name | varchar, not null | 組織名 |
-| type | varchar, not null | 組織種別 |
+| name | varchar(100), not null | 組織名 |
+| type | varchar(32), not null | 組織種別 |
 | fiscal_year_start_month | tinyint unsigned, default 1 | 会計年度開始月 |
 | created_at | timestamp | Laravel標準 |
 | updated_at | timestamp | Laravel標準 |
@@ -285,7 +293,9 @@ organization
 
 v0.1では、登録時は `company` をDefaultとしてよい。
 
-Organization編集画面はv0.1では必須ではない。
+v0.1では登録時に `type = company`、`fiscal_year_start_month = 1` をサーバー側で設定する。
+
+Organizationの一覧・編集・削除・切替画面は実装しない。
 
 ---
 
@@ -299,13 +309,15 @@ Organization編集画面はv0.1では必須ではない。
 |---|---|---|
 | id | bigint PK | Primary Key |
 | organization_id | FK, not null | Organization |
-| code | varchar, not null | 部門コード |
-| name | varchar, not null | 部門名 |
+| code | varchar(32), not null | 部門コード |
+| name | varchar(100), not null | 部門名 |
 | is_active | boolean, default true | 使用可否 |
 | created_at | timestamp | Laravel標準 |
 | updated_at | timestamp | Laravel標準 |
 
 同じOrganization内で `code` はUniqueとする。
+
+`code` はtrim後に大文字へ正規化し、1～32文字のASCII英大文字・数字・アンダースコア・ハイフンのみ許可する。先頭は英大文字または数字とする。名称はtrim後1～100文字とする。
 
 例:
 
@@ -330,6 +342,8 @@ v0.1では以下を実装する。
 
 予実入力画面では、有効な部門だけを選択可能とする。
 
+部門の削除機能と `deleted_at` は作らない。無効化と再有効化のみを提供する。Organization削除およびDepartment削除に対する外部キー動作は `RESTRICT` とする。
+
 ---
 
 # 6. Account Master
@@ -342,14 +356,16 @@ v0.1では以下を実装する。
 |---|---|---|
 | id | bigint PK | Primary Key |
 | organization_id | FK, not null | Organization |
-| code | varchar, not null | 勘定科目コード |
-| name | varchar, not null | 勘定科目名 |
-| account_type | varchar, not null | 勘定科目区分 |
+| code | varchar(32), not null | 勘定科目コード |
+| name | varchar(100), not null | 勘定科目名 |
+| account_type | varchar(16), not null | 勘定科目区分 |
 | is_active | boolean, default true | 使用可否 |
 | created_at | timestamp | Laravel標準 |
 | updated_at | timestamp | Laravel標準 |
 
 同じOrganization内で `code` はUniqueとする。
+
+`code` はtrim後に大文字へ正規化し、1～32文字のASCII英大文字・数字・アンダースコア・ハイフンのみ許可する。先頭は英大文字または数字とする。名称はtrim後1～100文字とする。
 
 account_type:
 
@@ -386,6 +402,8 @@ v0.1では以下を実装する。
 
 予実入力画面では、有効な勘定科目だけを選択可能とする。
 
+勘定科目の削除機能と `deleted_at` は作らない。無効化と再有効化のみを提供する。Organization削除およびAccount削除に対する外部キー動作は `RESTRICT` とする。
+
 ---
 
 # 7. 予算・実績データ
@@ -402,9 +420,9 @@ v0.1の中心機能。
 | account_id | FK, not null | Account |
 | period | date, not null | 対象年月。DB上は月初日として保存 |
 | type | varchar, not null | `budget` / `actual` |
-| amount | decimal(18,2), not null | 金額 |
+| amount | decimal(15,2), not null | 金額 |
 | memo | varchar(500), nullable | メモ |
-| source | varchar, default `manual` | 登録元 |
+| source | varchar(32), not null, default `manual` | 登録元 |
 | created_at | timestamp | Laravel標準 |
 | updated_at | timestamp | Laravel標準 |
 
@@ -427,6 +445,8 @@ UI: 2026-04
 DB: 2026-04-01
 ```
 
+入力は厳密な `YYYY-MM` 形式とし、`1900-01`～`9999-12` の範囲だけを許可する。1桁月、日を含む値、不正な月は拒否する。DBでは必ず月初日であることを保証する。
+
 ### type
 
 以下のみ許可する。
@@ -442,6 +462,8 @@ actual
 
 将来の調整仕訳や予算修正等を考慮し、負数を禁止しない。
 
+整数部13桁、小数部2桁までを許可し、範囲は `-9,999,999,999,999.99`～`9,999,999,999,999.99` とする。小数3桁以上を丸めず拒否する。カンマ、通貨記号、指数表記を含む入力は拒否する。
+
 ### source
 
 v0.1では原則:
@@ -453,6 +475,17 @@ manual
 のみ使用する。
 
 Excel Import機能は存在しない。
+
+`source` は画面やリクエストから受け取らず、サーバー側で常に `manual` を設定する。
+
+### Tenant整合性と外部キー
+
+- `monthly_amounts.organization_id` はリクエストから受け取らず、ログインユーザーから設定する。
+- DepartmentとAccountは同じOrganizationに属するものだけを関連付けられるよう、ValidationとDB制約の両方で保証する。
+- `departments` と `accounts` には、複合外部キーの参照先となる `UNIQUE (organization_id, id)` を設定する。
+- DB制約では `(organization_id, department_id)` と `(organization_id, account_id)` の組み合わせを複合外部キーで保証する。
+- Organization、Department、Accountの削除に対する外部キー動作は `RESTRICT` とする。
+- MonthlyAmountの削除は物理削除とし、Soft Deleteは使用しない。
 
 ---
 
@@ -505,10 +538,12 @@ Accounta
 - department_id: required / current organization内 / active
 - account_id: required / current organization内 / active
 - type: required / `budget` or `actual`
-- amount: required / numeric
+- amount: required / 上記の桁数・形式・範囲を満たす10進数
 - memo: nullable / max 500
 
 ブラウザから他OrganizationのIDを直接送信しても登録できないこと。
+
+新規登録および関連先を変更する更新では、有効なDepartment / Accountだけを選択できる。既存明細が無効化済みマスタを参照している場合は、現在値を「無効」と表示したうえで維持でき、金額・メモ等を更新できる。別マスタへ変更するときは変更先が有効でなければならない。
 
 ---
 
@@ -532,6 +567,8 @@ v0.1では以下を実装する。
 - Delete
 - Pagination
 
+v0.1では検索・絞り込み・任意の並び替え・一覧上の集計は実装しない。1ページ20件固定とする。
+
 並び順Default:
 
 ```text
@@ -540,6 +577,8 @@ id DESC
 ```
 
 削除時は確認を表示する。
+
+削除は対象明細だけを物理削除する。独立した詳細表示画面は作らず、一覧から編集・削除を行う。
 
 ---
 
@@ -575,7 +614,11 @@ Unique Constraintで1レコードに制限してはならない。
 
 ---
 
-# 11. Excel Export
+# 11. Excel Export（v0.2 実装仕様）
+
+> この章は次バージョンv0.2の確定仕様であり、現在のv0.1では実装しない。
+>
+> v0.1では `maatwebsite/excel` をインストールせず、Excel出力画面・Route・テストも作成しない。
 
 ## 11.1 方針
 
@@ -617,6 +660,8 @@ Departments
 Accounts
 ```
 
+Sheetは上記の順序で固定し、他のSheetを含めない。各Sheetの1行目をヘッダ、2行目以降をデータとし、タイトル行・空行・集計行・Table・Formula・Pivot Tableを追加しない。データが0件でも3 Sheetとヘッダ行は必ず出力する。
+
 ### Sheet: Amounts
 
 **マスタ名称は意図的に含めず、コードを使ってXLOOKUP等を練習できるようにする。**
@@ -633,6 +678,14 @@ Type
 Amount
 Memo
 ```
+
+Cell Type / Format:
+
+- `Period`: 対象月1日のExcel日付セル。表示形式は `yyyy-mm`
+- `Year`, `Month`: 整数の数値セル
+- `DepartmentCode`, `AccountCode`, `Type`, `Memo`: 文字列セル
+- `Amount`: 数値セル。表示形式は `#,##0.00`
+- `Memo` がnullの場合は空セル。日本語・改行・最大500文字を保持する
 
 例:
 
@@ -651,6 +704,8 @@ DepartmentName
 IsActive
 ```
 
+`DepartmentCode`, `DepartmentName` は文字列セル、`IsActive` はBooleanセルとする。
+
 ### Sheet: Accounts
 
 Columns:
@@ -661,6 +716,8 @@ AccountName
 AccountType
 IsActive
 ```
+
+`AccountCode`, `AccountName`, `AccountType` は文字列セル、`IsActive` はBooleanセルとする。
 
 ## 11.4 Exportの目的
 
@@ -686,11 +743,36 @@ Accounta側はこれらの処理を実装しない。
 
 他Organizationのデータが混ざってはならない。
 
+- Amounts: 対象Organizationの全明細。期間・区分・マスタの有効状態による絞り込みは行わない
+- Departments / Accounts: 対象Organizationの有効・無効を含む全マスタ
+- 無効マスタを参照する過去明細もAmountsへ出力し、対応するマスタも各Master Sheetへ出力する
+
+出力順:
+
+```text
+Amounts: period DESC, id DESC
+Departments: code ASC, id ASC
+Accounts: code ASC, id ASC
+```
+
+参照済みマスタのコード・名称・区分を変更した場合、過去明細の出力には最新のマスタ値を使用する。v0.2ではマスタ値の履歴Snapshotを持たない。
+
 出力ファイル名例:
 
 ```text
 accounta_20260904_135900.xlsx
 ```
+
+ファイル名の日時はダウンロード開始時点の `Asia/Tokyo` とする。
+
+## 11.6 Download / Security
+
+- 認証必須の `GET /export/excel` で同期ダウンロードする
+- HTTP 200、xlsxのContent-Type、attachmentのContent-Dispositionを返す
+- キュー、進捗表示、出力履歴、サーバーへのファイル保存は実装しない
+- Organization IDをリクエストから受け取らず、認証ユーザーから決定する
+- コード・名称・区分・メモ等の文字列は明示的に文字列セルとして書き込み、`=`, `+`, `-`, `@` 等で始まってもFormulaとして評価させない
+- Workbook内にFormula型セルを生成しない
 
 ---
 
@@ -698,7 +780,9 @@ accounta_20260904_135900.xlsx
 
 Accounta自体にSQL EditorやSQL実行画面は作らない。
 
-ユーザーはMySQLクライアント等からDBへ接続し、Accountaで作成したデータに対して手動でSQLを実行する。
+信頼済みの開発者・所有者は対象DBに対応するクライアントからローカルまたは非公開環境のDBへ接続し、Accountaで作成したデータに対して手動でSQLを実行する。
+
+SQL学習用のDB接続設定・SQL Editor・Organization別DBの作成はAccountaの機能として実装しない。共有環境でアプリ利用者へDB認証情報を渡さない。
 
 学習対象例:
 
@@ -766,6 +850,8 @@ MonthlyAmount::query()
 Department / Accountについても同様。
 
 Form RequestやPolicy等を利用し、他OrganizationのIDを改ざんして参照・更新・削除できないようにする。
+
+他OrganizationのResource IDをURLへ指定した場合は、Resourceの存在を開示しないため404を返す。これは編集画面表示・更新・無効化・再有効化・削除に共通して適用する。
 
 ---
 
@@ -863,9 +949,14 @@ v0.1の主な画面:
 /amounts
 /amounts/create
 /amounts/{amount}/edit
-
-/export/excel
 ```
+
+Route範囲:
+
+- Organization: 登録時の作成とDashboardでの表示のみ
+- Department / Account: index, create, store, edit, update, active/inactive切替。show, destroyは作らない
+- MonthlyAmount: index, create, store, edit, update, destroy。独立したshowは作らない
+- API Routeは作らない
 
 Navigation例:
 
@@ -874,8 +965,7 @@ Accounta
  ├─ Dashboard
  ├─ 予算・実績
  ├─ 部門マスタ
- ├─ 勘定科目マスタ
- └─ Excel出力
+ └─ 勘定科目マスタ
 ```
 
 ---
@@ -949,6 +1039,12 @@ A005 旅費交通費     expense
 - emailを入力しなくても登録できる
 - メール認証を要求されない
 - メールアドレスではログインしない
+- login_idを小文字へ正規化し、大文字小文字を区別せず重複拒否する
+- login_idに許可されない文字・長さを拒否する
+- login_idをプロフィールから変更できない
+- Password Reset / Two-Factor Authentication / PasskeysのRouteが存在しない
+- Account Delete機能が存在しない
+- 登録失敗時にOrganizationとUserがRollbackされる
 
 ## Organization Isolation
 
@@ -957,13 +1053,15 @@ A005 旅費交通費     expense
 - 他OrganizationのMonthlyAmountを参照できない
 - 他OrganizationのMonthlyAmountを更新できない
 - 他OrganizationのMonthlyAmountを削除できない
-- Excel Exportに他Organizationのデータが含まれない
 
 ## Master
 
 - Departmentを登録・編集・無効化できる
 - Accountを登録・編集・無効化できる
 - 同一Organization内のCode重複を拒否する
+- Codeを大文字へ正規化する
+- 無効化したMasterを再有効化できる
+- 無効化したMasterを参照する既存明細が保持される
 
 ## Monthly Amount
 
@@ -973,14 +1071,10 @@ A005 旅費交通費     expense
 - 編集できる
 - 削除できる
 - 他OrganizationのDepartment / Accountを指定できない
-
-## Excel Export
-
-- xlsxをダウンロードできる
-- Amounts / Departments / Accounts の3 Sheetを出力する
-- Amountsに明細データが含まれる
-- Amountsに勘定科目名・部門名を混ぜない
-- Master Sheetに名称が出力される
+- periodを厳密なYYYY-MMで受け取り、月初日として保存する
+- amountの桁数・小数桁・形式・範囲を検証する
+- 無効Masterを新規明細へ割り当てられない
+- 無効Masterを参照する既存明細の金額・メモを更新できる
 
 ---
 
@@ -989,12 +1083,15 @@ A005 旅費交通費     expense
 以下がすべて満たされた時点でv0.1完了とする。
 
 - [ ] Laravel 13で起動できる
+- [ ] MySQL 8.4でMigrationとFeature Testが通る
 - [ ] Jetstream Livewireが導入されている
 - [ ] login_id + passwordで認証できる
 - [ ] emailなしでユーザー登録できる
 - [ ] メール認証がOFF
 - [ ] Password ResetがOFF
 - [ ] Two-Factor AuthenticationがOFF
+- [ ] PasskeysがOFF
+- [ ] Account DeleteがOFF
 - [ ] Organizationがユーザー登録時に作成される
 - [ ] Department Masterを登録・編集・無効化できる
 - [ ] Account Masterを登録・編集・無効化できる
@@ -1004,8 +1101,7 @@ A005 旅費交通費     expense
 - [ ] Budget / Actual明細を削除できる
 - [ ] 同一条件の複数明細を登録できる
 - [ ] Organization単位のデータ分離ができている
-- [ ] Excel Workbookを出力できる
-- [ ] ExcelにAmounts / Departments / Accountsの3 Sheetがある
+- [ ] Laravel Excelが未導入で、Excel Export機能が存在しない
 - [ ] Excel Import機能が存在しない
 - [ ] Power BI連携機能が存在しない
 - [ ] Accounta内に予実分析Dashboardを作っていない
@@ -1041,6 +1137,8 @@ Role / Permission
 User Invitation
 API
 Mobile App
+Passkeys
+Account Delete
 ```
 
 ---
@@ -1329,14 +1427,13 @@ Excel / Power BIはAccounta内部の機能として再現せず、必要なデ�
 4. ログインは `login_id + password`
 5. email認証・password reset・2FAはOFF
 6. データは必ずOrganizationで分離する
-7. ExcelはExportのみ
-8. Excelは `Amounts / Departments / Accounts` の3 Sheet
-9. Excel Importは作らない
-10. Power BI機能は作らない
-11. SQL Editorは作らない
-12. 予実分析Dashboardは作らない
-13. Part 2の機能は作らない
-14. 実装完了後、Definition of Doneを1項目ずつ確認する
-15. 不明点があっても、Part 2の機能を推測で先行実装しない
+7. Excel Exportはv0.2まで作らない
+8. Excel Importは作らない
+9. Power BI機能は作らない
+10. SQL Editorは作らない
+11. 予実分析Dashboardは作らない
+12. Part 2の機能は作らない
+13. 実装完了後、Definition of Doneを1項目ずつ確認する
+14. 不明点があっても、Part 2の機能を推測で先行実装しない
 
 **v0.1は小さく、明確に完成させること。**

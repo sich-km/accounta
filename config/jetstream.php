@@ -1,6 +1,5 @@
 <?php
 
-use Laravel\Jetstream\Features;
 use Laravel\Jetstream\Http\Middleware\AuthenticateSession;
 
 return [
@@ -44,7 +43,7 @@ return [
     |
     */
 
-    'guard' => 'sanctum',
+    'guard' => 'web',
 
     /*
     |--------------------------------------------------------------------------
@@ -57,13 +56,7 @@ return [
     |
     */
 
-    'features' => [
-        // Features::termsAndPrivacyPolicy(),
-        // Features::profilePhotos(),
-        // Features::api(),
-        // Features::teams(['invitations' => true]),
-        Features::accountDeletion(),
-    ],
+    'features' => [],
 
     /*
     |--------------------------------------------------------------------------

@@ -10,17 +10,25 @@ test('current profile information is available', function () {
     $component = Livewire::test(UpdateProfileInformationForm::class);
 
     expect($component->state['name'])->toEqual($user->name);
-    expect($component->state['email'])->toEqual($user->email);
 });
 
-test('profile information can be updated', function () {
-    $this->actingAs($user = User::factory()->create());
+test('only the profile display name can be updated', function () {
+    $this->actingAs($user = User::factory()->create([
+        'login_id' => 'original.user',
+        'email' => null,
+    ]));
 
     Livewire::test(UpdateProfileInformationForm::class)
-        ->set('state', ['name' => 'Test Name', 'email' => 'test@example.com'])
+        ->set('state', [
+            'name' => 'Test Name',
+            'login_id' => 'changed.user',
+            'email' => 'test@example.com',
+        ])
         ->call('updateProfileInformation');
 
-    expect($user->fresh())
-        ->name->toEqual('Test Name')
-        ->email->toEqual('test@example.com');
+    $user->refresh();
+
+    expect($user->name)->toEqual('Test Name');
+    expect($user->login_id)->toEqual('original.user');
+    expect($user->email)->toBeNull();
 });
