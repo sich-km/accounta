@@ -3,5 +3,5 @@
     class="inline-flex rounded-xl focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-4"
     aria-label="Accounta ホーム"
 >
-    <x-application-logo class="h-16" />
+    <x-application-logo class="w-52 sm:w-56" />
 </a>

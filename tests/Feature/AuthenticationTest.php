@@ -7,7 +7,8 @@ test('login screen can be rendered', function () {
         ->assertOk()
         ->assertSee('Accounta')
         ->assertDontSee('予算と実績を、すっきり見える化')
-        ->assertSee('favicon.svg')
+        ->assertSee('logo.webp')
+        ->assertSee('mark.webp')
         ->assertSee('ユーザーID')
         ->assertDontSee('パスワードを忘れた');
 });

@@ -31,7 +31,7 @@ test('new users can register', function () {
 
     $this->get(route('dashboard'))
         ->assertOk()
-        ->assertSee('favicon.svg')
+        ->assertSee('mark.webp')
         ->assertSee('テスト株式会社');
 });
 
