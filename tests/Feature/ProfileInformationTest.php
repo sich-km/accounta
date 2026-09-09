@@ -1,8 +1,31 @@
 <?php
 
+use App\Models\Organization;
 use App\Models\User;
 use Laravel\Jetstream\Http\Livewire\UpdateProfileInformationForm;
 use Livewire\Livewire;
+
+test('profile screen displays the current organization information', function () {
+    $user = User::factory()->create(['user_type' => 'user']);
+    $user->company->update([
+        'code' => 'test-company',
+        'name' => 'テスト会社',
+        'fiscal_year_start_month' => 4,
+    ]);
+    $user->organization->update(['name' => '東京本部']);
+    Organization::factory()->create(['name' => '他社組織']);
+
+    $this->actingAs($user)
+        ->get(route('profile.show'))
+        ->assertOk()
+        ->assertSeeText('組織情報')
+        ->assertSeeText('テスト会社')
+        ->assertSeeText('test-company')
+        ->assertSeeText('東京本部')
+        ->assertSeeText('一般ユーザー')
+        ->assertSeeText('4月')
+        ->assertDontSeeText('他社組織');
+});
 
 test('current profile information is available', function () {
     $this->actingAs($user = User::factory()->create());

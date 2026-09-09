@@ -17,11 +17,21 @@ class User extends Authenticatable
     use Notifiable;
 
     /**
+     * @var array<string, string>
+     */
+    public const TYPES = [
+        'admin' => '管理者',
+        'user' => '一般ユーザー',
+    ];
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
     protected $fillable = [
+        'company_id',
+        'user_type',
         'login_id',
         'name',
         'email',
@@ -40,9 +50,19 @@ class User extends Authenticatable
         'two_factor_secret',
     ];
 
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->user_type === 'admin';
     }
 
     /**

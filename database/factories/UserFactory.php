@@ -26,6 +26,10 @@ class UserFactory extends Factory
     {
         return [
             'organization_id' => Organization::factory(),
+            'company_id' => fn (array $attributes): int => Organization::query()
+                ->findOrFail($attributes['organization_id'])
+                ->company_id,
+            'user_type' => 'user',
             'login_id' => fake()->unique()->regexify('[a-z][a-z0-9_]{7}'),
             'name' => fake()->name(),
             'email' => null,

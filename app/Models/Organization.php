@@ -5,6 +5,7 @@ namespace App\Models;
 use Database\Factories\OrganizationFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Organization extends Model
@@ -13,13 +14,27 @@ class Organization extends Model
     use HasFactory;
 
     /**
+     * @var array<string, string>
+     */
+    public const TYPES = [
+        'company' => '法人',
+        'sole_proprietor' => '個人事業主',
+        'learning' => '学習用',
+        'organization' => 'その他の組織',
+    ];
+
+    /**
      * @var list<string>
      */
     protected $fillable = [
         'name',
         'type',
-        'fiscal_year_start_month',
     ];
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 
     public function users(): HasMany
     {

@@ -2,7 +2,7 @@
 
 namespace App\Actions\Fortify;
 
-use App\Models\Organization;
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -35,13 +35,18 @@ class CreateNewUser implements CreatesNewUsers
         ])->validate();
 
         return DB::transaction(function () use ($input): User {
-            $organization = Organization::create([
+            $company = Company::query()
+                ->where('code', Company::DEFAULT_CODE)
+                ->firstOrFail();
+
+            $organization = $company->organizations()->create([
                 'name' => $input['organization_name'],
                 'type' => 'company',
-                'fiscal_year_start_month' => 1,
             ]);
 
             return $organization->users()->create([
+                'company_id' => $company->id,
+                'user_type' => 'user',
                 'login_id' => $input['login_id'],
                 'name' => $input['name'],
                 'email' => null,

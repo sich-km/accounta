@@ -111,6 +111,12 @@
                                 プロフィール
                             </x-dropdown-link>
 
+                            @if (Auth::user()->isAdmin())
+                                <x-dropdown-link href="{{ route('companies.index') }}">
+                                    会社情報管理
+                                </x-dropdown-link>
+                            @endif
+
                             @if (Laravel\Jetstream\Jetstream::hasApiFeatures())
                                 <x-dropdown-link href="{{ route('api-tokens.index') }}">
                                     {{ __('API Tokens') }}
@@ -182,6 +188,12 @@
                 <x-responsive-nav-link href="{{ route('profile.show') }}" :active="request()->routeIs('profile.show')">
                     プロフィール
                 </x-responsive-nav-link>
+
+                @if (Auth::user()->isAdmin())
+                    <x-responsive-nav-link href="{{ route('companies.index') }}" :active="request()->routeIs('companies.*')">
+                        会社情報管理
+                    </x-responsive-nav-link>
+                @endif
 
                 @if (Laravel\Jetstream\Jetstream::hasApiFeatures())
                     <x-responsive-nav-link href="{{ route('api-tokens.index') }}" :active="request()->routeIs('api-tokens.index')">

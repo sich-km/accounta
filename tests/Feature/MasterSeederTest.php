@@ -45,15 +45,16 @@ test('master seeders can be rerun without creating duplicates', function () {
     $this->seed();
     $this->seed();
 
-    $this->assertDatabaseCount('departments', 15);
-    $this->assertDatabaseCount('accounts', 59);
+    $this->assertDatabaseCount('departments', 30);
+    $this->assertDatabaseCount('accounts', 118);
 });
 
-test('database seeding does not create a fixed user or organization', function () {
+test('database seeding creates initial tenant data and master records', function () {
     $this->seed();
 
-    $this->assertDatabaseCount('users', 0);
-    $this->assertDatabaseCount('organizations', 0);
-    $this->assertDatabaseCount('departments', 0);
-    $this->assertDatabaseCount('accounts', 0);
+    $this->assertDatabaseCount('companies', 1);
+    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('organizations', 1);
+    $this->assertDatabaseCount('departments', 15);
+    $this->assertDatabaseCount('accounts', 59);
 });

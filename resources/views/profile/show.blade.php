@@ -13,6 +13,51 @@
                 <x-section-border />
             @endif
 
+            <div class="mt-10 sm:mt-0">
+                <x-action-section>
+                    <x-slot name="title">
+                        組織情報
+                    </x-slot>
+
+                    <x-slot name="description">
+                        現在所属している会社と組織の情報です。
+                    </x-slot>
+
+                    <x-slot name="content">
+                        <dl class="grid gap-6 sm:grid-cols-2">
+                            <div class="sm:col-span-2">
+                                <dt class="text-sm font-medium text-gray-500">会社名</dt>
+                                <dd class="mt-1 text-base font-semibold text-gray-900">{{ $company->name }}</dd>
+                            </div>
+
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">企業コード</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ $company->code }}</dd>
+                            </div>
+
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">会計年度開始月</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ $company->fiscal_year_start_month }}月</dd>
+                            </div>
+
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">所属組織</dt>
+                                <dd class="mt-1 text-sm text-gray-900">{{ $organization->name }}</dd>
+                            </div>
+
+                            <div>
+                                <dt class="text-sm font-medium text-gray-500">ユーザー種別</dt>
+                                <dd class="mt-1 text-sm text-gray-900">
+                                    {{ App\Models\User::TYPES[$user->user_type] ?? $user->user_type }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </x-slot>
+                </x-action-section>
+            </div>
+
+            <x-section-border />
+
             @if (Laravel\Fortify\Features::enabled(Laravel\Fortify\Features::updatePasswords()))
                 <div class="mt-10 sm:mt-0">
                     @livewire('profile.update-password-form')

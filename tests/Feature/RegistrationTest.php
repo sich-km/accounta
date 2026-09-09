@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Company;
 use App\Models\User;
 
 test('registration screen can be rendered', function () {
@@ -10,6 +11,8 @@ test('registration screen can be rendered', function () {
 });
 
 test('new users can register', function () {
+    $company = Company::factory()->create(['code' => Company::DEFAULT_CODE]);
+
     $response = $this->post('/register', [
         'login_id' => ' Test.User ',
         'name' => 'Test User',
@@ -24,8 +27,11 @@ test('new users can register', function () {
     $user = User::query()->where('login_id', 'test.user')->firstOrFail();
 
     expect($user->email)->toBeNull();
+    expect($user->company_id)->toBe($company->id);
+    expect($user->user_type)->toBe('user');
     $this->assertDatabaseHas('organizations', [
         'id' => $user->organization_id,
+        'company_id' => $company->id,
         'name' => 'テスト株式会社',
     ]);
 
@@ -36,6 +42,7 @@ test('new users can register', function () {
 });
 
 test('login ids are unique after normalization', function () {
+    Company::factory()->create(['code' => Company::DEFAULT_CODE]);
     User::factory()->create(['login_id' => 'test.user']);
 
     $this->post('/register', [
