@@ -1,0 +1,11 @@
+---
+description: Automated test execution policy for Accounta development
+alwaysApply: true
+---
+
+# テスト実行方針
+
+- ユーザーから明示的に依頼された場合に限り、自動テストを実行する。
+- 通常の機能追加や修正では、`php artisan test`、`vendor/bin/pest`、`npm test` 等のテストコマンドを自動的に実行しない。
+- v1.0開発時、リリース確認時、機能完成時であっても、ユーザーの明示的な依頼なしにテストを実行しない。
+- テストを実行していない場合は、作業完了時にその旨を簡潔に伝える。

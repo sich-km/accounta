@@ -21,6 +21,7 @@ class User extends Authenticatable
      */
     public const TYPES = [
         'admin' => '管理者',
+        'company_admin' => '会社管理者',
         'user' => '一般ユーザー',
     ];
 
@@ -63,6 +64,16 @@ class User extends Authenticatable
     public function isAdmin(): bool
     {
         return $this->user_type === 'admin';
+    }
+
+    public function isCompanyAdmin(): bool
+    {
+        return $this->user_type === 'company_admin';
+    }
+
+    public function canManageMasters(): bool
+    {
+        return $this->isAdmin() || $this->isCompanyAdmin();
     }
 
     /**

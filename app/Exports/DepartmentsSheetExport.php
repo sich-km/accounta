@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Department;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -16,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 /**
  * @implements WithMapping<Department>
  */
-class DepartmentsSheetExport extends DefaultValueBinder implements FromQuery, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class DepartmentsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
@@ -58,7 +59,19 @@ class DepartmentsSheetExport extends DefaultValueBinder implements FromQuery, Wi
 
     public function title(): string
     {
-        return 'Departments';
+        return '部門マスタ';
+    }
+
+    /**
+     * @return array<string, float|int>
+     */
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 18,
+            'B' => 32,
+            'C' => 12,
+        ];
     }
 
     public function bindValue(Cell $cell, mixed $value): bool

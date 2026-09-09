@@ -13,6 +13,7 @@ test('database seeder creates the initial tenant admin and default masters once'
         ->firstOrFail();
     $organization = $company->organizations()->firstOrFail();
     $admin = User::query()->where('login_id', 'admin')->firstOrFail();
+    $companyAdmin = User::query()->where('login_id', 'company_admin')->firstOrFail();
     $user = User::query()->where('login_id', 'user1')->firstOrFail();
 
     expect($company->name)->toBe('KM');
@@ -23,6 +24,11 @@ test('database seeder creates the initial tenant admin and default masters once'
     expect($admin->user_type)->toBe('admin');
     expect($admin->name)->toBe('admin');
     expect(Hash::check('password', $admin->password))->toBeFalse();
+    expect($companyAdmin->company_id)->toBe($company->id);
+    expect($companyAdmin->organization_id)->toBe($organization->id);
+    expect($companyAdmin->user_type)->toBe('company_admin');
+    expect($companyAdmin->name)->toBe('company_admin');
+    expect(Hash::check('password', $companyAdmin->password))->toBeFalse();
     expect($user->company_id)->toBe($company->id);
     expect($user->organization_id)->toBe($organization->id);
     expect($user->user_type)->toBe('user');
@@ -42,16 +48,18 @@ test('database seeder creates the initial tenant admin and default masters once'
     $departmentCount = $organization->departments()->count();
     $accountCount = $organization->accounts()->count();
     $adminPasswordHash = $admin->password;
+    $companyAdminPasswordHash = $companyAdmin->password;
     $userPasswordHash = $user->password;
 
     $this->seed();
 
     $this->assertDatabaseCount('companies', 1);
     $this->assertDatabaseCount('organizations', 1);
-    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('users', 3);
     expect($organization->departments()->count())->toBe($departmentCount);
     expect($organization->accounts()->count())->toBe($accountCount);
     expect($admin->fresh()->password)->toBe($adminPasswordHash);
+    expect($companyAdmin->fresh()->password)->toBe($companyAdminPasswordHash);
     expect($user->fresh()->password)->toBe($userPasswordHash);
 });
 
@@ -75,11 +83,13 @@ test('initial tenant seeder preserves an existing user password and role separat
 
     $user->refresh();
     $admin = User::query()->where('login_id', 'admin')->firstOrFail();
+    $companyAdmin = User::query()->where('login_id', 'company_admin')->firstOrFail();
 
     expect($user->login_id)->toBe('user1');
     expect($user->name)->toBe('user1');
     expect($user->user_type)->toBe('user');
     expect($user->password)->toBe($passwordHash);
     expect($admin->user_type)->toBe('admin');
-    $this->assertDatabaseCount('users', 2);
+    expect($companyAdmin->user_type)->toBe('company_admin');
+    $this->assertDatabaseCount('users', 3);
 });

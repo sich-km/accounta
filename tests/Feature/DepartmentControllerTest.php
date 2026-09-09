@@ -4,8 +4,8 @@ use App\Models\Department;
 use App\Models\Organization;
 use App\Models\User;
 
-test('users can create and view departments in their organization', function () {
-    $user = User::factory()->create();
+test('company administrators can create and view departments in their organization', function () {
+    $user = User::factory()->companyAdmin()->create();
 
     $this->actingAs($user)
         ->get(route('departments.create'))
@@ -33,8 +33,8 @@ test('users can create and view departments in their organization', function () 
         ->assertSee('開発部');
 });
 
-test('users can update and disable their departments', function () {
-    $user = User::factory()->create();
+test('system administrators can update and disable their departments', function () {
+    $user = User::factory()->admin()->create();
     $department = Department::factory()->for($user->organization)->create();
 
     $this->actingAs($user)
@@ -56,7 +56,7 @@ test('users can update and disable their departments', function () {
 });
 
 test('departments from another organization return 404', function () {
-    $user = User::factory()->create();
+    $user = User::factory()->companyAdmin()->create();
     $otherDepartment = Department::factory()
         ->for(Organization::factory())
         ->create();
@@ -68,4 +68,54 @@ test('departments from another organization return 404', function () {
     $this->actingAs($user)
         ->patch(route('departments.status', $otherDepartment))
         ->assertNotFound();
+});
+
+test('regular users can only view departments without management controls', function () {
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create([
+        'code' => 'D100',
+        'name' => '閲覧専用部門',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('departments.index'))
+        ->assertOk()
+        ->assertSee('D100')
+        ->assertSee('閲覧専用部門')
+        ->assertDontSee('新規登録')
+        ->assertDontSee('編集')
+        ->assertDontSee('無効化');
+
+    $this->actingAs($user)
+        ->get(route('departments.create'))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->post(route('departments.store'), [
+            'code' => 'D200',
+            'name' => '登録不可部門',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->get(route('departments.edit', $department))
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->put(route('departments.update', $department), [
+            'code' => 'D101',
+            'name' => '変更不可部門',
+        ])
+        ->assertForbidden();
+
+    $this->actingAs($user)
+        ->patch(route('departments.status', $department))
+        ->assertForbidden();
+
+    $this->assertDatabaseMissing('departments', ['code' => 'D200']);
+    expect($department->fresh()->only(['code', 'name', 'is_active']))->toBe([
+        'code' => 'D100',
+        'name' => '閲覧専用部門',
+        'is_active' => true,
+    ]);
 });

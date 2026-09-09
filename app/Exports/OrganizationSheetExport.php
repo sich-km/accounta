@@ -5,6 +5,7 @@ namespace App\Exports;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -16,7 +17,7 @@ use PhpOffice\PhpSpreadsheet\Cell\DataType;
 /**
  * @implements WithMapping<Organization>
  */
-class OrganizationSheetExport extends DefaultValueBinder implements FromQuery, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class OrganizationSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
@@ -62,7 +63,21 @@ class OrganizationSheetExport extends DefaultValueBinder implements FromQuery, W
 
     public function title(): string
     {
-        return 'Organization';
+        return '会社・組織情報';
+    }
+
+    /**
+     * @return array<string, float|int>
+     */
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 18,
+            'B' => 32,
+            'C' => 22,
+            'D' => 32,
+            'E' => 20,
+        ];
     }
 
     public function bindValue(Cell $cell, mixed $value): bool

@@ -6,6 +6,7 @@ use App\Models\MonthlyAmount;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
+use Maatwebsite\Excel\Concerns\WithColumnWidths;
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
@@ -19,7 +20,7 @@ use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 /**
  * @implements WithMapping<MonthlyAmount>
  */
-class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnFormatting, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnFormatting, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
@@ -86,7 +87,24 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
 
     public function title(): string
     {
-        return 'Amounts';
+        return '予算・実績';
+    }
+
+    /**
+     * @return array<string, float|int>
+     */
+    public function columnWidths(): array
+    {
+        return [
+            'A' => 12,
+            'B' => 10,
+            'C' => 10,
+            'D' => 18,
+            'E' => 18,
+            'F' => 12,
+            'G' => 16,
+            'H' => 40,
+        ];
     }
 
     public function bindValue(Cell $cell, mixed $value): bool

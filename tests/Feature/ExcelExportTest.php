@@ -22,7 +22,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
         'name' => '@CompanyName',
         'fiscal_year_start_month' => 4,
     ]);
-    $user = User::factory()->for($organization)->create();
+    $user = User::factory()->admin()->for($organization)->create();
     $department = Department::factory()->for($organization)->create([
         'code' => 'D002',
         'name' => '=DepartmentName',
@@ -65,13 +65,13 @@ test('current organization data can be downloaded as an Excel workbook', functio
     $this->travelBack();
 
     expect($spreadsheet->getSheetNames())->toBe([
-        'Amounts',
-        'Departments',
-        'Accounts',
-        'Organization',
+        '予算・実績',
+        '部門マスタ',
+        '勘定科目マスタ',
+        '会社・組織情報',
     ]);
 
-    $amounts = $spreadsheet->getSheetByName('Amounts');
+    $amounts = $spreadsheet->getSheetByName('予算・実績');
 
     expect($amounts?->rangeToArray('A1:H1')[0])->toBe([
         'Period',
@@ -94,8 +94,10 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($amounts?->getCell('G2')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
     expect($amounts?->getCell('H2')->getValue())->toBe('=SUM(1,1)');
     expect($amounts?->getCell('H2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($amounts?->getColumnDimension('A')->getWidth())->toBe(12.0);
+    expect($amounts?->getColumnDimension('H')->getWidth())->toBe(40.0);
 
-    $departments = $spreadsheet->getSheetByName('Departments');
+    $departments = $spreadsheet->getSheetByName('部門マスタ');
 
     expect($departments?->rangeToArray('A1:C1')[0])->toBe([
         'DepartmentCode',
@@ -108,8 +110,10 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($departments?->getCell('B3')->getValue())->toBe('=DepartmentName');
     expect($departments?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
     expect($departments?->getCell('C3')->getDataType())->toBe(DataType::TYPE_BOOL);
+    expect($departments?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($departments?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
-    $accounts = $spreadsheet->getSheetByName('Accounts');
+    $accounts = $spreadsheet->getSheetByName('勘定科目マスタ');
 
     expect($accounts?->rangeToArray('A1:D1')[0])->toBe([
         'AccountCode',
@@ -123,8 +127,10 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($accounts?->getCell('B3')->getValue())->toBe('+AccountName');
     expect($accounts?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
     expect($accounts?->getCell('D3')->getDataType())->toBe(DataType::TYPE_BOOL);
+    expect($accounts?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($accounts?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
-    $organizationSheet = $spreadsheet->getSheetByName('Organization');
+    $organizationSheet = $spreadsheet->getSheetByName('会社・組織情報');
 
     expect($organizationSheet?->rangeToArray('A1:E1')[0])->toBe([
         'CompanyCode',
@@ -141,6 +147,8 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($organizationSheet?->getCell('D2')->getValue())->toBe('=OrganizationName');
     expect($organizationSheet?->getCell('D2')->getDataType())->toBe(DataType::TYPE_STRING);
     expect($organizationSheet?->getCell('E2')->getValue())->toBe('company');
+    expect($organizationSheet?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($organizationSheet?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
     $spreadsheet->disconnectWorksheets();
 });
@@ -148,7 +156,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
 test('organizations without records export all sheets with headings', function () {
     $organization = Organization::factory()->create();
     $contents = Excel::raw(
-        new AccountaWorkbookExport($organization->id),
+        new AccountaWorkbookExport($organization->id, true),
         ExcelWriter::XLSX,
     );
     $temporaryFile = tempnam(sys_get_temp_dir(), 'accounta-export-');
@@ -158,21 +166,44 @@ test('organizations without records export all sheets with headings', function (
         $spreadsheet = IOFactory::load($temporaryFile);
 
         expect($spreadsheet->getSheetNames())->toBe([
-            'Amounts',
-            'Departments',
-            'Accounts',
-            'Organization',
+            '予算・実績',
+            '部門マスタ',
+            '勘定科目マスタ',
+            '会社・組織情報',
         ]);
-        expect($spreadsheet->getSheetByName('Amounts')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('Departments')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('Accounts')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('Organization')?->getHighestDataRow())->toBe(2);
+        expect($spreadsheet->getSheetByName('予算・実績')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('部門マスタ')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('勘定科目マスタ')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('会社・組織情報')?->getHighestDataRow())->toBe(2);
 
         $spreadsheet->disconnectWorksheets();
     } finally {
         unlink($temporaryFile);
     }
 });
+
+test('non-admin workbooks omit company and organization information', function (string $userType) {
+    $organization = Organization::factory()->create();
+    $user = User::factory()->for($organization)->create(['user_type' => $userType]);
+
+    $response = $this->actingAs($user)
+        ->get(route('export.excel'))
+        ->assertOk();
+
+    $spreadsheet = IOFactory::load($response->baseResponse->getFile()->getPathname());
+
+    expect($spreadsheet->getSheetNames())->toBe([
+        '予算・実績',
+        '部門マスタ',
+        '勘定科目マスタ',
+    ]);
+    expect($spreadsheet->getSheetByName('会社・組織情報'))->toBeNull();
+
+    $spreadsheet->disconnectWorksheets();
+})->with([
+    'company administrator' => 'company_admin',
+    'regular user' => 'user',
+]);
 
 test('guests cannot download an Excel workbook', function () {
     $this->get(route('export.excel'))

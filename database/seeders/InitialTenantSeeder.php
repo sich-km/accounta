@@ -32,6 +32,7 @@ class InitialTenantSeeder extends Seeder
 
             foreach ([
                 'admin' => 'admin',
+                'company_admin' => 'company_admin',
                 'user1' => 'user',
             ] as $loginId => $userType) {
                 $plainPassword = $this->ensureUser(

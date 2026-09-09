@@ -53,7 +53,7 @@ test('database seeding creates initial tenant data and master records', function
     $this->seed();
 
     $this->assertDatabaseCount('companies', 1);
-    $this->assertDatabaseCount('users', 2);
+    $this->assertDatabaseCount('users', 3);
     $this->assertDatabaseCount('organizations', 1);
     $this->assertDatabaseCount('departments', 15);
     $this->assertDatabaseCount('accounts', 59);

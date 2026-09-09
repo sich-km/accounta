@@ -15,7 +15,10 @@ class ExcelExportController extends Controller
         $fileName = 'accounta_'.now(config('app.timezone'))->format('Ymd_His').'.xlsx';
 
         return Excel::download(
-            new AccountaWorkbookExport((int) $request->user()->organization_id),
+            new AccountaWorkbookExport(
+                (int) $request->user()->organization_id,
+                $request->user()->isAdmin(),
+            ),
             $fileName,
             ExcelWriter::XLSX,
         );

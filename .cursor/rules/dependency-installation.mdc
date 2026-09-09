@@ -1,0 +1,12 @@
+---
+description: Manual dependency installation policy for Composer and npm
+alwaysApply: true
+---
+
+# 依存パッケージの導入方針
+
+- Composerまたはnpmで依存パッケージの取得、追加、更新が必要になっても、エージェントはインストール系コマンドを実行しない。
+- `composer install`、`composer require`、`composer update`、`npm install`、`npm add`、`npm update`、`npm ci` および同等のコマンドは、ユーザーが手動で実行する。
+- 新しいパッケージが必要な場合は、パッケージ名、必要な理由および実行すべきコマンドをユーザーへ提示し、手動実行の完了を待ってから作業を続ける。
+- ユーザーの明示的な依頼なしに、`composer.json`、`composer.lock`、`package.json` またはロックファイルを手作業で変更して、パッケージが導入済みであるかのように扱わない。
+- 既に導入されているパッケージの確認や、依存関係を取得しない既存のBuild・整形コマンドは、この制限の対象外とする。

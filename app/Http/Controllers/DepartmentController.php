@@ -7,12 +7,15 @@ use App\Http\Requests\UpdateDepartmentRequest;
 use App\Models\Department;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\View;
 
 class DepartmentController extends Controller
 {
     public function index(Request $request): View
     {
+        Gate::authorize('viewAny', Department::class);
+
         $departments = Department::query()
             ->forOrganization($request->user()->organization_id)
             ->orderBy('code')
@@ -24,6 +27,8 @@ class DepartmentController extends Controller
 
     public function create(): View
     {
+        Gate::authorize('create', Department::class);
+
         return view('departments.create');
     }
 
@@ -42,6 +47,7 @@ class DepartmentController extends Controller
     public function edit(Request $request, int $department): View
     {
         $department = $this->ownedDepartment($request, $department);
+        Gate::authorize('update', $department);
 
         return view('departments.edit', compact('department'));
     }
@@ -49,6 +55,7 @@ class DepartmentController extends Controller
     public function update(UpdateDepartmentRequest $request, int $department): RedirectResponse
     {
         $department = $this->ownedDepartment($request, $department);
+        Gate::authorize('update', $department);
         $department->update($request->validated());
 
         return redirect()
@@ -59,6 +66,7 @@ class DepartmentController extends Controller
     public function toggleStatus(Request $request, int $department): RedirectResponse
     {
         $department = $this->ownedDepartment($request, $department);
+        Gate::authorize('update', $department);
         $department->update(['is_active' => ! $department->is_active]);
 
         return back()->with(

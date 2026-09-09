@@ -7,18 +7,26 @@ use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
 class AccountaWorkbookExport implements Export, WithMultipleSheets
 {
-    public function __construct(private readonly int $organizationId) {}
+    public function __construct(
+        private readonly int $organizationId,
+        private readonly bool $includeOrganizationSheet,
+    ) {}
 
     /**
      * @return list<Export>
      */
     public function sheets(): array
     {
-        return [
+        $sheets = [
             new AmountsSheetExport($this->organizationId),
             new DepartmentsSheetExport($this->organizationId),
             new AccountsSheetExport($this->organizationId),
-            new OrganizationSheetExport($this->organizationId),
         ];
+
+        if ($this->includeOrganizationSheet) {
+            $sheets[] = new OrganizationSheetExport($this->organizationId);
+        }
+
+        return $sheets;
     }
 }
