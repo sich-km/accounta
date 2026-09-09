@@ -15,7 +15,7 @@ Before relying on a package's API, confirm its installed version:
 
 ## Skills Activation
 
-This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+This project has domain-specific skills available in `.agents/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 
@@ -175,3 +175,21 @@ This project has domain-specific skills available in `**/skills/**`. You MUST ac
 - After the feature tests pass, ask the user to run the complete suite with `php artisan test --compact`.
 
 </laravel-boost-guidelines>
+
+# Accounta Project Overrides
+
+The following repository-specific rules override conflicting guidance above.
+
+## Dependency Installation
+
+- Do not run commands that install, add, or update Composer or npm dependencies.
+- The user runs `composer install`, `composer require`, `composer update`, `npm install`, `npm add`, `npm update`, `npm ci`, and equivalent commands manually.
+- When a new package is required, provide the package name, reason, and exact command, then wait for the user to confirm completion.
+- Do not manually edit `composer.json`, `composer.lock`, `package.json`, or lock files to make an uninstalled dependency appear installed unless the user explicitly requests that file change.
+- Commands that only inspect installed dependencies, build existing assets, or format existing code are allowed.
+
+## Test Execution
+
+- Add or update tests for code changes as required, but run automated tests only when the user explicitly asks.
+- Do not automatically run `php artisan test`, `vendor/bin/pest`, `npm test`, or equivalent test commands during ordinary implementation, release checks, or feature completion.
+- If tests were not run, state that briefly in the final response.
