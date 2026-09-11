@@ -39,9 +39,9 @@ class Company extends Model
         return $this->hasManyThrough(Department::class, Organization::class);
     }
 
-    public function accounts(): HasManyThrough
+    public function managementAccounts(): HasManyThrough
     {
-        return $this->hasManyThrough(Account::class, Organization::class);
+        return $this->hasManyThrough(ManagementAccount::class, Organization::class);
     }
 
     public function monthlyAmounts(): HasManyThrough

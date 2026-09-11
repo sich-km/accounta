@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\User;
 
@@ -28,7 +29,7 @@ test('new users can register', function () {
 
     expect($user->email)->toBeNull();
     expect($user->company_id)->toBe($company->id);
-    expect($user->user_type)->toBe('user');
+    expect($user->user_type)->toBe(UserType::User);
     $this->assertDatabaseHas('organizations', [
         'id' => $user->organization_id,
         'company_id' => $company->id,

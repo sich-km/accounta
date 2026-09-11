@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\UserType;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -29,7 +30,7 @@ class UserFactory extends Factory
             'company_id' => fn (array $attributes): int => Organization::query()
                 ->findOrFail($attributes['organization_id'])
                 ->company_id,
-            'user_type' => 'user',
+            'user_type' => UserType::User,
             'login_id' => fake()->unique()->regexify('[a-z][a-z0-9_]{7}'),
             'name' => fake()->name(),
             'email' => null,
@@ -52,14 +53,14 @@ class UserFactory extends Factory
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_type' => 'admin',
+            'user_type' => UserType::Admin,
         ]);
     }
 
     public function companyAdmin(): static
     {
         return $this->state(fn (array $attributes) => [
-            'user_type' => 'company_admin',
+            'user_type' => UserType::CompanyAdmin,
         ]);
     }
 }

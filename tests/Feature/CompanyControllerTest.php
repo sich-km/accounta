@@ -1,10 +1,11 @@
 <?php
 
+use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\User;
 
 test('admins can create update and delete empty companies', function () {
-    $admin = User::factory()->create(['user_type' => 'admin']);
+    $admin = User::factory()->create(['user_type' => UserType::Admin]);
 
     $this->actingAs($admin)
         ->get(route('companies.index'))
@@ -46,7 +47,7 @@ test('admins can create update and delete empty companies', function () {
 });
 
 test('users cannot manage companies', function () {
-    $user = User::factory()->create(['user_type' => 'user']);
+    $user = User::factory()->create(['user_type' => UserType::User]);
 
     $this->actingAs($user)
         ->get(route('companies.index'))
@@ -64,7 +65,7 @@ test('users cannot manage companies', function () {
 });
 
 test('admins cannot delete their own company', function () {
-    $admin = User::factory()->create(['user_type' => 'admin']);
+    $admin = User::factory()->create(['user_type' => UserType::Admin]);
 
     $this->actingAs($admin)
         ->delete(route('companies.destroy', $admin->company))
@@ -74,7 +75,7 @@ test('admins cannot delete their own company', function () {
 });
 
 test('company input is validated', function () {
-    $admin = User::factory()->create(['user_type' => 'admin']);
+    $admin = User::factory()->create(['user_type' => UserType::Admin]);
 
     $this->actingAs($admin)
         ->post(route('companies.store'), [

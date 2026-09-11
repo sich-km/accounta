@@ -2,10 +2,10 @@
 
 namespace App\Policies;
 
-use App\Models\Account;
+use App\Models\ManagementAccount;
 use App\Models\User;
 
-class AccountPolicy
+class ManagementAccountPolicy
 {
     /**
      * Determine whether the user can view any models.
@@ -18,9 +18,9 @@ class AccountPolicy
     /**
      * Determine whether the user can view the model.
      */
-    public function view(User $user, Account $account): bool
+    public function view(User $user, ManagementAccount $managementAccount): bool
     {
-        return $user->organization_id === $account->organization_id;
+        return $user->organization_id === $managementAccount->organization_id;
     }
 
     /**
@@ -34,16 +34,16 @@ class AccountPolicy
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Account $account): bool
+    public function update(User $user, ManagementAccount $managementAccount): bool
     {
         return $user->canManageMasters()
-            && $user->organization_id === $account->organization_id;
+            && $user->organization_id === $managementAccount->organization_id;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Account $account): bool
+    public function delete(User $user, ManagementAccount $managementAccount): bool
     {
         return false;
     }
@@ -51,7 +51,7 @@ class AccountPolicy
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Account $account): bool
+    public function restore(User $user, ManagementAccount $managementAccount): bool
     {
         return false;
     }
@@ -59,7 +59,7 @@ class AccountPolicy
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Account $account): bool
+    public function forceDelete(User $user, ManagementAccount $managementAccount): bool
     {
         return false;
     }

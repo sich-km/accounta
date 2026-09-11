@@ -1,10 +1,10 @@
 @php
-    $canSubmit = $departments->isNotEmpty() && $accounts->isNotEmpty();
+    $canSubmit = $departments->isNotEmpty() && $managementAccounts->isNotEmpty();
 @endphp
 
 @unless ($canSubmit)
     <div class="mb-6 rounded-md bg-amber-50 p-4 text-sm text-amber-800">
-        明細を登録するには、有効な部門と勘定科目をそれぞれ1件以上登録してください。
+        明細を登録するには、有効な部門と予実管理科目をそれぞれ1件以上登録してください。
     </div>
 @endunless
 
@@ -44,16 +44,16 @@
     </div>
 
     <div>
-        <x-label for="account_id" value="勘定科目" />
-        <select id="account_id" name="account_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+        <x-label for="management_account_id" value="予実管理科目" />
+        <select id="management_account_id" name="management_account_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
             <option value="">選択してください</option>
-            @foreach ($accounts as $account)
-                <option value="{{ $account->id }}" @selected((int) old('account_id', $amount?->account_id) === $account->id)>
-                    {{ $account->code }} {{ $account->name }}{{ $account->is_active ? '' : '（無効）' }}
+            @foreach ($managementAccounts as $managementAccount)
+                <option value="{{ $managementAccount->id }}" @selected((int) old('management_account_id', $amount?->management_account_id) === $managementAccount->id)>
+                    {{ $managementAccount->code }} {{ $managementAccount->name }}{{ $managementAccount->is_active ? '' : '（無効）' }}
                 </option>
             @endforeach
         </select>
-        <x-input-error for="account_id" class="mt-2" />
+        <x-input-error for="management_account_id" class="mt-2" />
     </div>
 
     <fieldset>

@@ -17,7 +17,7 @@ return new class extends Migration
                 ->constrained()
                 ->restrictOnDelete();
             $table->foreignId('department_id');
-            $table->foreignId('account_id');
+            $table->foreignId('management_account_id');
             $table->date('period');
             $table->string('type', 16);
             $table->decimal('amount', 15, 2);
@@ -29,9 +29,9 @@ return new class extends Migration
                 ->references(['organization_id', 'id'])
                 ->on('departments')
                 ->restrictOnDelete();
-            $table->foreign(['organization_id', 'account_id'])
+            $table->foreign(['organization_id', 'management_account_id'])
                 ->references(['organization_id', 'id'])
-                ->on('accounts')
+                ->on('management_accounts')
                 ->restrictOnDelete();
             $table->index(['organization_id', 'period', 'id']);
         });

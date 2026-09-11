@@ -48,7 +48,7 @@
                             <div>
                                 <dt class="text-sm font-medium text-gray-500">ユーザー種別</dt>
                                 <dd class="mt-1 text-sm text-gray-900">
-                                    {{ App\Models\User::TYPES[$user->user_type] ?? $user->user_type }}
+                                    {{ $user->user_type->label() }}
                                 </dd>
                             </div>
                         </dl>

@@ -46,13 +46,18 @@ class Organization extends Model
         return $this->hasMany(Department::class);
     }
 
-    public function accounts(): HasMany
+    public function managementAccounts(): HasMany
     {
-        return $this->hasMany(Account::class);
+        return $this->hasMany(ManagementAccount::class);
     }
 
     public function monthlyAmounts(): HasMany
     {
         return $this->hasMany(MonthlyAmount::class);
+    }
+
+    public function fixedAssets(): HasMany
+    {
+        return $this->hasMany(FixedAsset::class);
     }
 }

@@ -26,7 +26,7 @@ class MonthlyAmount extends Model
      */
     protected $fillable = [
         'department_id',
-        'account_id',
+        'management_account_id',
         'period',
         'type',
         'amount',
@@ -52,9 +52,9 @@ class MonthlyAmount extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function account(): BelongsTo
+    public function managementAccount(): BelongsTo
     {
-        return $this->belongsTo(Account::class);
+        return $this->belongsTo(ManagementAccount::class);
     }
 
     /**

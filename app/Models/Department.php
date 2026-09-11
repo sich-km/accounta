@@ -42,6 +42,11 @@ class Department extends Model
         return $this->hasMany(MonthlyAmount::class);
     }
 
+    public function fixedAssets(): HasMany
+    {
+        return $this->hasMany(FixedAsset::class);
+    }
+
     /**
      * @return array<string, string>
      */

@@ -18,11 +18,8 @@
                     <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
                         予算・実績
                     </x-nav-link>
-                    <x-nav-link href="{{ route('departments.index') }}" :active="request()->routeIs('departments.*')">
-                        部門マスタ
-                    </x-nav-link>
-                    <x-nav-link href="{{ route('accounts.index') }}" :active="request()->routeIs('accounts.*')">
-                        勘定科目マスタ
+                    <x-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
+                        固定資産管理台帳
                     </x-nav-link>
                 </div>
             </div>
@@ -160,11 +157,8 @@
             <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
                 予算・実績
             </x-responsive-nav-link>
-            <x-responsive-nav-link href="{{ route('departments.index') }}" :active="request()->routeIs('departments.*')">
-                部門マスタ
-            </x-responsive-nav-link>
-            <x-responsive-nav-link href="{{ route('accounts.index') }}" :active="request()->routeIs('accounts.*')">
-                勘定科目マスタ
+            <x-responsive-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
+                固定資産管理台帳
             </x-responsive-nav-link>
         </div>
 

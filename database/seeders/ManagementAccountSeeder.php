@@ -2,12 +2,19 @@
 
 namespace Database\Seeders;
 
-use App\Models\Account;
+use App\Models\ManagementAccount;
 use App\Models\Organization;
 use Illuminate\Database\Seeder;
 
-class AccountSeeder extends Seeder
+class ManagementAccountSeeder extends Seeder
 {
+    /**
+     * @var list<string>
+     */
+    private const array OBSOLETE_ACCOUNT_CODES = [
+        '1500',
+    ];
+
     /**
      * @var list<array{code: string, name: string, account_type: string}>
      */
@@ -17,11 +24,13 @@ class AccountSeeder extends Seeder
         ['code' => '1200', 'name' => '棚卸資産', 'account_type' => 'asset'],
         ['code' => '1300', 'name' => '前払費用', 'account_type' => 'asset'],
         ['code' => '1400', 'name' => '未収入金', 'account_type' => 'asset'],
-        ['code' => '1500', 'name' => '有形固定資産', 'account_type' => 'asset'],
-        ['code' => '1510', 'name' => '建物及び構築物', 'account_type' => 'asset'],
+        ['code' => '1510', 'name' => '建物', 'account_type' => 'asset'],
+        ['code' => '1511', 'name' => '構築物', 'account_type' => 'asset'],
         ['code' => '1520', 'name' => '機械装置', 'account_type' => 'asset'],
         ['code' => '1530', 'name' => '工具器具備品', 'account_type' => 'asset'],
+        ['code' => '1590', 'name' => '建設仮勘定', 'account_type' => 'asset'],
         ['code' => '1600', 'name' => 'ソフトウェア', 'account_type' => 'asset'],
+        ['code' => '1610', 'name' => 'ソフトウェア仮勘定', 'account_type' => 'asset'],
 
         ['code' => '2000', 'name' => '買掛金', 'account_type' => 'liability'],
         ['code' => '2100', 'name' => '未払金', 'account_type' => 'liability'],
@@ -95,10 +104,10 @@ class AccountSeeder extends Seeder
             ->select('id')
             ->eachById(function (Organization $organization): void {
                 $now = now();
-                $accounts = array_map(
-                    fn (array $account): array => [
+                $managementAccounts = array_map(
+                    fn (array $managementAccount): array => [
                         'organization_id' => $organization->id,
-                        ...$account,
+                        ...$managementAccount,
                         'is_active' => true,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -106,11 +115,31 @@ class AccountSeeder extends Seeder
                     self::ACCOUNTS
                 );
 
-                Account::query()->upsert(
-                    $accounts,
+                ManagementAccount::query()->upsert(
+                    $managementAccounts,
                     ['organization_id', 'code'],
                     ['name', 'account_type', 'is_active', 'updated_at']
                 );
+
+                $this->removeObsoleteAccounts($organization);
             });
+    }
+
+    private function removeObsoleteAccounts(Organization $organization): void
+    {
+        $obsoleteAccounts = ManagementAccount::query()
+            ->forOrganization($organization->id)
+            ->whereIn('code', self::OBSOLETE_ACCOUNT_CODES)
+            ->get();
+
+        foreach ($obsoleteAccounts as $obsoleteAccount) {
+            if ($obsoleteAccount->monthlyAmounts()->exists()) {
+                $obsoleteAccount->update(['is_active' => false]);
+
+                continue;
+            }
+
+            $obsoleteAccount->delete();
+        }
     }
 }

@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\UserType;
 use App\Exports\AccountaWorkbookExport;
-use App\Models\Account;
 use App\Models\Department;
+use App\Models\FixedAsset;
+use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
@@ -31,25 +33,44 @@ test('current organization data can be downloaded as an Excel workbook', functio
         'code' => 'D001',
         'name' => '無効部門',
     ]);
-    $account = Account::factory()->for($organization)->create([
+    $managementAccount = ManagementAccount::factory()->for($organization)->create([
         'code' => 'A002',
         'name' => '+AccountName',
         'account_type' => 'expense',
     ]);
-    Account::factory()->for($organization)->inactive()->create([
+    ManagementAccount::factory()->for($organization)->inactive()->create([
         'code' => 'A001',
         'name' => '無効科目',
     ]);
     MonthlyAmount::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'account_id' => $account->id,
+        'management_account_id' => $managementAccount->id,
         'period' => '2026-04-01',
         'type' => 'budget',
         'amount' => '5000000.25',
         'memo' => '=SUM(1,1)',
     ]);
     MonthlyAmount::factory()->create();
+    FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $department->id,
+        'asset_code' => 'FA-002',
+        'asset_name' => '=AssetName',
+        'asset_category' => 'other',
+        'asset_category_detail' => '+AssetCategory',
+        'acquisition_date' => '2026-04-01',
+        'service_start_date' => '2026-04-15',
+        'acquisition_cost' => '5000000.25',
+        'useful_life_years' => 10,
+        'depreciation_method' => 'straight_line',
+        'residual_value' => '100000.00',
+        'current_period_depreciation_expense' => '400000.00',
+        'accumulated_depreciation' => '800000.00',
+        'status' => 'held',
+        'notes' => '=SUM(1,1)',
+    ]);
+    FixedAsset::factory()->create();
 
     $this->travelTo(Carbon::create(2026, 9, 4, 13, 59, 0, 'Asia/Tokyo'));
 
@@ -66,8 +87,9 @@ test('current organization data can be downloaded as an Excel workbook', functio
 
     expect($spreadsheet->getSheetNames())->toBe([
         '予算・実績',
+        'FixedAssets',
         '部門マスタ',
-        '勘定科目マスタ',
+        '予実管理科目マスタ',
         '会社・組織情報',
     ]);
 
@@ -78,7 +100,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
         'Year',
         'Month',
         'DepartmentCode',
-        'AccountCode',
+        'ManagementAccountCode',
         'Type',
         'Amount',
         'Memo',
@@ -97,6 +119,50 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($amounts?->getColumnDimension('A')->getWidth())->toBe(12.0);
     expect($amounts?->getColumnDimension('H')->getWidth())->toBe(40.0);
 
+    $fixedAssets = $spreadsheet->getSheetByName('FixedAssets');
+
+    expect($fixedAssets?->rangeToArray('A1:P1')[0])->toBe([
+        'AssetCode',
+        'AssetName',
+        'AssetCategory',
+        'AssetCategoryDetail',
+        'DepartmentCode',
+        'AcquisitionDate',
+        'ServiceStartDate',
+        'AcquisitionCost',
+        'UsefulLifeYears',
+        'DepreciationMethod',
+        'ResidualValue',
+        'CurrentPeriodDepreciationExpense',
+        'AccumulatedDepreciation',
+        'BookValue',
+        'Status',
+        'Notes',
+    ]);
+    expect($fixedAssets?->getHighestDataRow())->toBe(2);
+    expect($fixedAssets?->getCell('A2')->getValue())->toBe('FA-002');
+    expect($fixedAssets?->getCell('B2')->getValue())->toBe('=AssetName');
+    expect($fixedAssets?->getCell('B2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($fixedAssets?->getCell('C2')->getValue())->toBe('other');
+    expect($fixedAssets?->getCell('D2')->getValue())->toBe('+AssetCategory');
+    expect($fixedAssets?->getCell('D2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($fixedAssets?->getCell('E2')->getValue())->toBe('D002');
+    expect($fixedAssets?->getCell('F2')->getFormattedValue())->toBe('2026-04-01');
+    expect($fixedAssets?->getCell('G2')->getFormattedValue())->toBe('2026-04-15');
+    expect($fixedAssets?->getCell('H2')->getValue())->toBe(5000000.25);
+    expect($fixedAssets?->getCell('I2')->getValue())->toBe(10);
+    expect($fixedAssets?->getCell('J2')->getValue())->toBe('straight_line');
+    expect($fixedAssets?->getCell('K2')->getValue())->toBe(100000.0);
+    expect($fixedAssets?->getCell('L2')->getValue())->toBe(400000.0);
+    expect($fixedAssets?->getCell('M2')->getValue())->toBe(800000.0);
+    expect($fixedAssets?->getCell('N2')->getValue())->toBe(4200000.25);
+    expect($fixedAssets?->getCell('N2')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
+    expect($fixedAssets?->getCell('O2')->getValue())->toBe('held');
+    expect($fixedAssets?->getCell('P2')->getValue())->toBe('=SUM(1,1)');
+    expect($fixedAssets?->getCell('P2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($fixedAssets?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($fixedAssets?->getColumnDimension('P')->getWidth())->toBe(40.0);
+
     $departments = $spreadsheet->getSheetByName('部門マスタ');
 
     expect($departments?->rangeToArray('A1:C1')[0])->toBe([
@@ -113,22 +179,22 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($departments?->getColumnDimension('A')->getWidth())->toBe(18.0);
     expect($departments?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
-    $accounts = $spreadsheet->getSheetByName('勘定科目マスタ');
+    $managementAccounts = $spreadsheet->getSheetByName('予実管理科目マスタ');
 
-    expect($accounts?->rangeToArray('A1:D1')[0])->toBe([
-        'AccountCode',
-        'AccountName',
+    expect($managementAccounts?->rangeToArray('A1:D1')[0])->toBe([
+        'ManagementAccountCode',
+        'ManagementAccountName',
         'AccountType',
         'IsActive',
     ]);
-    expect($accounts?->getHighestDataRow())->toBe(3);
-    expect($accounts?->getCell('A2')->getValue())->toBe('A001');
-    expect($accounts?->getCell('A3')->getValue())->toBe('A002');
-    expect($accounts?->getCell('B3')->getValue())->toBe('+AccountName');
-    expect($accounts?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
-    expect($accounts?->getCell('D3')->getDataType())->toBe(DataType::TYPE_BOOL);
-    expect($accounts?->getColumnDimension('A')->getWidth())->toBe(18.0);
-    expect($accounts?->getColumnDimension('B')->getWidth())->toBe(32.0);
+    expect($managementAccounts?->getHighestDataRow())->toBe(3);
+    expect($managementAccounts?->getCell('A2')->getValue())->toBe('A001');
+    expect($managementAccounts?->getCell('A3')->getValue())->toBe('A002');
+    expect($managementAccounts?->getCell('B3')->getValue())->toBe('+AccountName');
+    expect($managementAccounts?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($managementAccounts?->getCell('D3')->getDataType())->toBe(DataType::TYPE_BOOL);
+    expect($managementAccounts?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($managementAccounts?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
     $organizationSheet = $spreadsheet->getSheetByName('会社・組織情報');
 
@@ -167,13 +233,15 @@ test('organizations without records export all sheets with headings', function (
 
         expect($spreadsheet->getSheetNames())->toBe([
             '予算・実績',
+            'FixedAssets',
             '部門マスタ',
-            '勘定科目マスタ',
+            '予実管理科目マスタ',
             '会社・組織情報',
         ]);
         expect($spreadsheet->getSheetByName('予算・実績')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('FixedAssets')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('部門マスタ')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('勘定科目マスタ')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('予実管理科目マスタ')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('会社・組織情報')?->getHighestDataRow())->toBe(2);
 
         $spreadsheet->disconnectWorksheets();
@@ -182,7 +250,7 @@ test('organizations without records export all sheets with headings', function (
     }
 });
 
-test('non-admin workbooks omit company and organization information', function (string $userType) {
+test('non-admin workbooks omit company and organization information', function (UserType $userType) {
     $organization = Organization::factory()->create();
     $user = User::factory()->for($organization)->create(['user_type' => $userType]);
 
@@ -194,15 +262,16 @@ test('non-admin workbooks omit company and organization information', function (
 
     expect($spreadsheet->getSheetNames())->toBe([
         '予算・実績',
+        'FixedAssets',
         '部門マスタ',
-        '勘定科目マスタ',
+        '予実管理科目マスタ',
     ]);
     expect($spreadsheet->getSheetByName('会社・組織情報'))->toBeNull();
 
     $spreadsheet->disconnectWorksheets();
 })->with([
-    'company administrator' => 'company_admin',
-    'regular user' => 'user',
+    'company administrator' => UserType::CompanyAdmin,
+    'regular user' => UserType::User,
 ]);
 
 test('guests cannot download an Excel workbook', function () {

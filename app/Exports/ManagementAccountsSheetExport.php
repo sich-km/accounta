@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\Account;
+use App\Models\ManagementAccount;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
@@ -15,18 +15,18 @@ use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 /**
- * @implements WithMapping<Account>
+ * @implements WithMapping<ManagementAccount>
  */
-class AccountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class ManagementAccountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
     /**
-     * @return Builder<Account>
+     * @return Builder<ManagementAccount>
      */
     public function query(): Builder
     {
-        return Account::query()
+        return ManagementAccount::query()
             ->forOrganization($this->organizationId)
             ->orderBy('code')
             ->orderBy('id');
@@ -38,8 +38,8 @@ class AccountsSheetExport extends DefaultValueBinder implements FromQuery, WithC
     public function headings(): array
     {
         return [
-            'AccountCode',
-            'AccountName',
+            'ManagementAccountCode',
+            'ManagementAccountName',
             'AccountType',
             'IsActive',
         ];
@@ -50,7 +50,7 @@ class AccountsSheetExport extends DefaultValueBinder implements FromQuery, WithC
      */
     public function map(mixed $row): array
     {
-        /** @var Account $row */
+        /** @var ManagementAccount $row */
         return [
             $row->code,
             $row->name,
@@ -61,7 +61,7 @@ class AccountsSheetExport extends DefaultValueBinder implements FromQuery, WithC
 
     public function title(): string
     {
-        return '勘定科目マスタ';
+        return '予実管理科目マスタ';
     }
 
     /**

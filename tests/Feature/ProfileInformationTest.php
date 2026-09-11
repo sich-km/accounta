@@ -1,12 +1,13 @@
 <?php
 
+use App\Enums\UserType;
 use App\Models\Organization;
 use App\Models\User;
 use Laravel\Jetstream\Http\Livewire\UpdateProfileInformationForm;
 use Livewire\Livewire;
 
 test('profile screen displays the current organization information', function () {
-    $user = User::factory()->create(['user_type' => 'user']);
+    $user = User::factory()->create(['user_type' => UserType::User]);
     $user->company->update([
         'code' => 'test-company',
         'name' => 'テスト会社',

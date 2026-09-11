@@ -51,17 +51,17 @@ class UpdateMonthlyAmountRequest extends FormRequest
                             ))
                 ),
             ],
-            'account_id' => [
+            'management_account_id' => [
                 'required',
                 'integer',
-                Rule::exists('accounts', 'id')->where(
+                Rule::exists('management_accounts', 'id')->where(
                     fn ($query) => $query
                         ->where('organization_id', $this->user()->organization_id)
                         ->where(fn ($masterQuery) => $masterQuery
                             ->where('is_active', true)
                             ->when(
                                 $monthlyAmount,
-                                fn ($activeQuery) => $activeQuery->orWhere('id', $monthlyAmount->account_id)
+                                fn ($activeQuery) => $activeQuery->orWhere('id', $monthlyAmount->management_account_id)
                             ))
                 ),
             ],
@@ -79,7 +79,7 @@ class UpdateMonthlyAmountRequest extends FormRequest
         return [
             'period.regex' => '対象年月はYYYY-MM形式で入力してください。',
             'department_id.exists' => '有効な部門を選択してください。',
-            'account_id.exists' => '有効な勘定科目を選択してください。',
+            'management_account_id.exists' => '有効な予実管理科目を選択してください。',
             'type.in' => '区分を選択してください。',
             'amount.regex' => '金額は整数13桁、小数2桁以内で入力してください。',
         ];

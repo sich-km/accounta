@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\Organization;
 use App\Models\User;
@@ -31,9 +32,9 @@ class InitialTenantSeeder extends Seeder
             );
 
             foreach ([
-                'admin' => 'admin',
-                'company_admin' => 'company_admin',
-                'user1' => 'user',
+                'admin' => UserType::Admin,
+                'company_admin' => UserType::CompanyAdmin,
+                'user1' => UserType::User,
             ] as $loginId => $userType) {
                 $plainPassword = $this->ensureUser(
                     $company,
@@ -61,7 +62,7 @@ class InitialTenantSeeder extends Seeder
         Company $company,
         Organization $organization,
         string $loginId,
-        string $userType,
+        UserType $userType,
     ): ?string {
         $user = User::query()->where('login_id', $loginId)->first();
 

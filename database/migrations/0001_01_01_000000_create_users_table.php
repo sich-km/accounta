@@ -13,14 +13,27 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('email')->unique();
+            $table->foreignId('company_id')
+                ->constrained()
+                ->restrictOnDelete();
+            $table->foreignId('organization_id')
+                ->constrained()
+                ->restrictOnDelete();
+            $table->string('login_id', 50)->unique();
+            $table->string('user_type', 32)->default('user');
+            $table->string('name', 100);
+            $table->string('email')->nullable()->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
             $table->foreignId('current_team_id')->nullable();
             $table->string('profile_photo_path', 2048)->nullable();
             $table->timestamps();
+
+            $table->foreign(['company_id', 'organization_id'])
+                ->references(['company_id', 'id'])
+                ->on('organizations')
+                ->restrictOnDelete();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

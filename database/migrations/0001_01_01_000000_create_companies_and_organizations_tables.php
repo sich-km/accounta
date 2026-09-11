@@ -11,12 +11,24 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('organizations', function (Blueprint $table) {
+        Schema::create('companies', function (Blueprint $table) {
             $table->id();
+            $table->string('code', 32)->unique();
             $table->string('name', 100);
-            $table->string('type', 32)->default('company');
             $table->unsignedTinyInteger('fiscal_year_start_month')->default(1);
             $table->timestamps();
+        });
+
+        Schema::create('organizations', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('company_id')
+                ->constrained()
+                ->restrictOnDelete();
+            $table->string('name', 100);
+            $table->string('type', 32)->default('company');
+            $table->timestamps();
+
+            $table->unique(['company_id', 'id']);
         });
     }
 
@@ -26,5 +38,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::dropIfExists('organizations');
+        Schema::dropIfExists('companies');
     }
 };

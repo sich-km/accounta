@@ -17,7 +17,9 @@ class DatabaseSeeder extends Seeder
         $this->call([
             InitialTenantSeeder::class,
             DepartmentSeeder::class,
-            AccountSeeder::class,
+            ManagementAccountSeeder::class,
+            MonthlyAmountSeeder::class,
+            FixedAssetSeeder::class,
         ]);
     }
 }

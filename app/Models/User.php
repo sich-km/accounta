@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserType;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,15 +16,6 @@ class User extends Authenticatable
     use HasFactory;
 
     use Notifiable;
-
-    /**
-     * @var array<string, string>
-     */
-    public const TYPES = [
-        'admin' => '管理者',
-        'company_admin' => '会社管理者',
-        'user' => '一般ユーザー',
-    ];
 
     /**
      * The attributes that are mass assignable.
@@ -63,12 +55,12 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->user_type === 'admin';
+        return $this->user_type === UserType::Admin;
     }
 
     public function isCompanyAdmin(): bool
     {
-        return $this->user_type === 'company_admin';
+        return $this->user_type === UserType::CompanyAdmin;
     }
 
     public function canManageMasters(): bool
@@ -86,6 +78,7 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'user_type' => UserType::class,
         ];
     }
 }

@@ -23,7 +23,7 @@
                             <tr>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">年月</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">部門</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">勘定科目</th>
+                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">予実管理科目</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">区分</th>
                                 <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">金額</th>
                                 <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">メモ</th>
@@ -38,7 +38,7 @@
                                         {{ $amount->department->code }} {{ $amount->department->name }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">
-                                        {{ $amount->account->code }} {{ $amount->account->name }}
+                                        {{ $amount->managementAccount->code }} {{ $amount->managementAccount->name }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ \App\Models\MonthlyAmount::TYPES[$amount->type] }}</td>
                                     <td class="whitespace-nowrap px-4 py-4 text-right text-sm font-medium text-gray-900">{{ number_format((float) $amount->amount, 2) }}</td>

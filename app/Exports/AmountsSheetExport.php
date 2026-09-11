@@ -33,7 +33,7 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
             ->forOrganization($this->organizationId)
             ->with([
                 'department:id,code',
-                'account:id,code',
+                'managementAccount:id,code',
             ])
             ->orderByDesc('period')
             ->orderByDesc('id');
@@ -49,7 +49,7 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
             'Year',
             'Month',
             'DepartmentCode',
-            'AccountCode',
+            'ManagementAccountCode',
             'Type',
             'Amount',
             'Memo',
@@ -67,7 +67,7 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
             $row->period->year,
             $row->period->month,
             $row->department->code,
-            $row->account->code,
+            $row->managementAccount->code,
             $row->type,
             (float) $row->amount,
             $row->memo,

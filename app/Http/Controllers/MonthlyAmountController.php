@@ -4,8 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreMonthlyAmountRequest;
 use App\Http\Requests\UpdateMonthlyAmountRequest;
-use App\Models\Account;
 use App\Models\Department;
+use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -19,7 +19,7 @@ class MonthlyAmountController extends Controller
     {
         $amounts = MonthlyAmount::query()
             ->forOrganization($request->user()->organization_id)
-            ->with(['department', 'account'])
+            ->with(['department', 'managementAccount'])
             ->orderByDesc('period')
             ->orderByDesc('id')
             ->paginate(20);
@@ -83,7 +83,7 @@ class MonthlyAmountController extends Controller
     }
 
     /**
-     * @return array{departments: Collection<int, Department>, accounts: Collection<int, Account>}
+     * @return array{departments: Collection<int, Department>, managementAccounts: Collection<int, ManagementAccount>}
      */
     private function masterData(Request $request, ?MonthlyAmount $amount = null): array
     {
@@ -98,16 +98,16 @@ class MonthlyAmountController extends Controller
             ->orderBy('code')
             ->get();
 
-        $accounts = Account::query()
+        $managementAccounts = ManagementAccount::query()
             ->forOrganization($organizationId)
             ->where(function ($query) use ($amount): void {
                 $query->where('is_active', true)
-                    ->when($amount, fn ($activeQuery) => $activeQuery->orWhere('id', $amount->account_id));
+                    ->when($amount, fn ($activeQuery) => $activeQuery->orWhere('id', $amount->management_account_id));
             })
             ->orderBy('code')
             ->get();
 
-        return compact('departments', 'accounts');
+        return compact('departments', 'managementAccounts');
     }
 
     private function ownedAmount(Request $request, int $amountId): MonthlyAmount

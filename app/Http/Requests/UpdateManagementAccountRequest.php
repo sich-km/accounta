@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Account;
+use App\Models\ManagementAccount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
-class StoreAccountRequest extends FormRequest
+class UpdateManagementAccountRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -31,12 +31,12 @@ class StoreAccountRequest extends FormRequest
                 'string',
                 'max:32',
                 'regex:/^[A-Z0-9][A-Z0-9_-]*$/',
-                Rule::unique('accounts', 'code')->where(
-                    fn ($query) => $query->where('organization_id', $this->user()->organization_id)
-                ),
+                Rule::unique('management_accounts', 'code')
+                    ->where(fn ($query) => $query->where('organization_id', $this->user()->organization_id))
+                    ->ignore((int) $this->route('management_account')),
             ],
             'name' => ['required', 'string', 'max:100'],
-            'account_type' => ['required', Rule::in(array_keys(Account::TYPES))],
+            'account_type' => ['required', Rule::in(array_keys(ManagementAccount::TYPES))],
         ];
     }
 
@@ -46,9 +46,9 @@ class StoreAccountRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'code.regex' => '勘定科目コードは英大文字・数字・アンダースコア・ハイフンで入力してください。',
-            'code.unique' => 'この勘定科目コードは既に使用されています。',
-            'account_type.in' => '勘定科目区分を選択してください。',
+            'code.regex' => '予実管理科目コードは英大文字・数字・アンダースコア・ハイフンで入力してください。',
+            'code.unique' => 'この予実管理科目コードは既に使用されています。',
+            'account_type.in' => '予実管理科目区分を選択してください。',
         ];
     }
 

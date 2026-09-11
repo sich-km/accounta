@@ -1,31 +1,32 @@
 <?php
 
+use App\Enums\UserType;
 use App\Models\Department;
 use App\Models\Organization;
 use App\Models\User;
 
-test('all user types can view their organization departments', function (string $userType) {
+test('all user types can view their organization departments', function (UserType $userType) {
     $user = User::factory()->create(['user_type' => $userType]);
     $department = Department::factory()->for($user->organization)->create();
 
     expect($user->can('viewAny', Department::class))->toBeTrue()
         ->and($user->can('view', $department))->toBeTrue();
 })->with([
-    'system administrator' => 'admin',
-    'company administrator' => 'company_admin',
-    'regular user' => 'user',
+    'system administrator' => UserType::Admin,
+    'company administrator' => UserType::CompanyAdmin,
+    'regular user' => UserType::User,
 ]);
 
-test('only administrators can manage departments', function (string $userType, bool $canManage) {
+test('only administrators can manage departments', function (UserType $userType, bool $canManage) {
     $user = User::factory()->create(['user_type' => $userType]);
     $department = Department::factory()->for($user->organization)->create();
 
     expect($user->can('create', Department::class))->toBe($canManage)
         ->and($user->can('update', $department))->toBe($canManage);
 })->with([
-    'system administrator' => ['admin', true],
-    'company administrator' => ['company_admin', true],
-    'regular user' => ['user', false],
+    'system administrator' => [UserType::Admin, true],
+    'company administrator' => [UserType::CompanyAdmin, true],
+    'regular user' => [UserType::User, false],
 ]);
 
 test('administrators cannot manage another organization department', function () {

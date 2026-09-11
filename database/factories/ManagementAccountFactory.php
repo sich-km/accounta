@@ -2,14 +2,14 @@
 
 namespace Database\Factories;
 
-use App\Models\Account;
+use App\Models\ManagementAccount;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
- * @extends Factory<Account>
+ * @extends Factory<ManagementAccount>
  */
-class AccountFactory extends Factory
+class ManagementAccountFactory extends Factory
 {
     /**
      * Define the model's default state.
@@ -22,7 +22,7 @@ class AccountFactory extends Factory
             'organization_id' => Organization::factory(),
             'code' => 'A'.fake()->unique()->numerify('####'),
             'name' => fake()->randomElement(['売上高', '人件費', '外注費', '旅費交通費']),
-            'account_type' => fake()->randomElement(array_keys(Account::TYPES)),
+            'account_type' => fake()->randomElement(array_keys(ManagementAccount::TYPES)),
             'is_active' => true,
         ];
     }

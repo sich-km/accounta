@@ -2,6 +2,7 @@
 
 namespace App\Actions\Fortify;
 
+use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -46,7 +47,7 @@ class CreateNewUser implements CreatesNewUsers
 
             return $organization->users()->create([
                 'company_id' => $company->id,
-                'user_type' => 'user',
+                'user_type' => UserType::User,
                 'login_id' => $input['login_id'],
                 'name' => $input['name'],
                 'email' => null,

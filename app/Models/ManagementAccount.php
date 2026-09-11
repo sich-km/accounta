@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Database\Factories\AccountFactory;
+use Database\Factories\ManagementAccountFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class Account extends Model
+class ManagementAccount extends Model
 {
-    /** @use HasFactory<AccountFactory> */
+    /** @use HasFactory<ManagementAccountFactory> */
     use HasFactory;
 
     /**
@@ -36,8 +36,8 @@ class Account extends Model
     ];
 
     /**
-     * @param  Builder<Account>  $query
-     * @return Builder<Account>
+     * @param  Builder<ManagementAccount>  $query
+     * @return Builder<ManagementAccount>
      */
     public function scopeForOrganization(Builder $query, int $organizationId): Builder
     {

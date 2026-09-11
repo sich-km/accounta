@@ -2,8 +2,8 @@
 
 namespace Database\Factories;
 
-use App\Models\Account;
 use App\Models\Department;
+use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -27,8 +27,8 @@ class MonthlyAmountFactory extends Factory
                     'organization_id' => $attributes['organization_id'],
                 ])->id;
             },
-            'account_id' => function (array $attributes): int {
-                return Account::factory()->create([
+            'management_account_id' => function (array $attributes): int {
+                return ManagementAccount::factory()->create([
                     'organization_id' => $attributes['organization_id'],
                 ])->id;
             },
