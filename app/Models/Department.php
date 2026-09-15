@@ -47,6 +47,16 @@ class Department extends Model
         return $this->hasMany(FixedAsset::class);
     }
 
+    public function journalEntryLines(): HasMany
+    {
+        return $this->hasMany(JournalEntryLine::class);
+    }
+
+    public function users(): HasMany
+    {
+        return $this->hasMany(User::class);
+    }
+
     /**
      * @return array<string, string>
      */

@@ -1,7 +1,12 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between gap-4">
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">部門マスタ</h2>
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                @if (auth()->user()->canManageMasters())
+                    <x-back-link href="{{ route('management.index') }}">管理へ戻る</x-back-link>
+                @endif
+                <h2 class="text-xl font-semibold leading-tight text-gray-800">部門マスタ</h2>
+            </div>
             @can('create', \App\Models\Department::class)
                 <a href="{{ route('departments.create') }}" class="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">
                     新規登録

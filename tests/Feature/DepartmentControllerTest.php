@@ -30,7 +30,9 @@ test('company administrators can create and view departments in their organizati
         ->get(route('departments.index'))
         ->assertOk()
         ->assertSee('D001')
-        ->assertSee('開発部');
+        ->assertSee('開発部')
+        ->assertSee('href="'.route('management.index').'"', false)
+        ->assertSeeText('管理へ戻る');
 });
 
 test('system administrators can update and disable their departments', function () {
@@ -84,7 +86,8 @@ test('regular users can only view departments without management controls', func
         ->assertSee('閲覧専用部門')
         ->assertDontSee('新規登録')
         ->assertDontSee('編集')
-        ->assertDontSee('無効化');
+        ->assertDontSee('無効化')
+        ->assertDontSeeText('管理へ戻る');
 
     $this->actingAs($user)
         ->get(route('departments.create'))

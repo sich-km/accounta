@@ -4,7 +4,11 @@ use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ExcelExportController;
 use App\Http\Controllers\FixedAssetController;
+use App\Http\Controllers\JournalDocumentController;
+use App\Http\Controllers\JournalEntryController;
+use App\Http\Controllers\LedgerAccountController;
 use App\Http\Controllers\ManagementAccountController;
+use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\MonthlyAmountController;
 use App\Models\FixedAsset;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +34,8 @@ Route::middleware([
                 'monthlyAmounts as actual_records_count' => fn (Builder $query): Builder => $query->where('type', 'actual'),
                 'departments as active_departments_count' => fn (Builder $query): Builder => $query->where('is_active', true),
                 'managementAccounts as active_management_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+                'ledgerAccounts as active_ledger_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+                'journalEntries as journal_entries_count',
             ])
             ->firstOrFail();
 
@@ -55,6 +61,9 @@ Route::middleware([
     Route::get('/export/excel', ExcelExportController::class)
         ->name('export.excel');
 
+    Route::get('/management', ManagementController::class)
+        ->name('management.index');
+
     Route::resource('companies', CompanyController::class)
         ->except('show');
 
@@ -67,6 +76,19 @@ Route::middleware([
         ->except(['show', 'destroy']);
     Route::patch('management-accounts/{management_account}/status', [ManagementAccountController::class, 'toggleStatus'])
         ->name('management-accounts.status');
+
+    Route::resource('ledger-accounts', LedgerAccountController::class)
+        ->except(['show', 'destroy']);
+    Route::patch('ledger-accounts/{ledger_account}/status', [LedgerAccountController::class, 'updateStatus'])
+        ->name('ledger-accounts.status');
+
+    Route::resource('journal-entries', JournalEntryController::class);
+    Route::post('journal-entries/{journal_entry}/documents', [JournalDocumentController::class, 'store'])
+        ->name('journal-entries.documents.store');
+    Route::get('journal-entries/{journal_entry}/documents/{journal_document}', [JournalDocumentController::class, 'show'])
+        ->name('journal-entries.documents.show');
+    Route::delete('journal-entries/{journal_entry}/documents/{journal_document}', [JournalDocumentController::class, 'destroy'])
+        ->name('journal-entries.documents.destroy');
 
     Route::resource('amounts', MonthlyAmountController::class)
         ->except('show');

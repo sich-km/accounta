@@ -10,7 +10,9 @@ test('admins can create update and delete empty companies', function () {
     $this->actingAs($admin)
         ->get(route('companies.index'))
         ->assertOk()
-        ->assertSeeText($admin->company->name);
+        ->assertSeeText($admin->company->name)
+        ->assertSee('href="'.route('management.index').'"', false)
+        ->assertSeeText('管理へ戻る');
 
     $this->actingAs($admin)
         ->post(route('companies.store'), [

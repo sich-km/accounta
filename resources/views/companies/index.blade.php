@@ -1,7 +1,10 @@
 <x-app-layout>
     <x-slot name="header">
-        <div class="flex items-center justify-between gap-4">
-            <h2 class="text-xl font-semibold leading-tight text-gray-800">会社情報</h2>
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <x-back-link href="{{ route('management.index') }}">管理へ戻る</x-back-link>
+                <h2 class="text-xl font-semibold leading-tight text-gray-800">会社情報</h2>
+            </div>
             <a href="{{ route('companies.create') }}" class="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">
                 新規登録
             </a>

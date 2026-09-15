@@ -18,6 +18,8 @@ class DatabaseSeeder extends Seeder
             InitialTenantSeeder::class,
             DepartmentSeeder::class,
             ManagementAccountSeeder::class,
+            LedgerAccountSeeder::class,
+            JournalEntrySeeder::class,
             MonthlyAmountSeeder::class,
             FixedAssetSeeder::class,
         ]);

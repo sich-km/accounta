@@ -25,6 +25,17 @@
             </div>
 
             <div class="mt-4">
+                <x-label for="department_code" value="所属部門コード（任意）" />
+                <x-input id="department_code" class="mt-1 block w-full" type="text" name="department_code" :value="old('department_code')" />
+            </div>
+
+            <div class="mt-4">
+                <x-label for="department_name" value="所属部門名（任意）" />
+                <x-input id="department_name" class="mt-1 block w-full" type="text" name="department_name" :value="old('department_name')" />
+                <p class="mt-1 text-xs text-gray-500">入力した場合、この組織の最初の部門として登録されます。</p>
+            </div>
+
+            <div class="mt-4">
                 <x-label for="password" value="パスワード" />
                 <x-input id="password" class="mt-1 block w-full" type="password" name="password" required autocomplete="new-password" />
             </div>

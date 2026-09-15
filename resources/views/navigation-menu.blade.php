@@ -1,3 +1,5 @@
+@php($managementMenuIsActive = request()->routeIs('management.*', 'departments.*', 'management-accounts.*', 'ledger-accounts.*', 'companies.*'))
+
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -12,15 +14,21 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
-                        ダッシュボード
-                    </x-nav-link>
-                    <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
-                        予算・実績
+                    <x-nav-link href="{{ route('journal-entries.index') }}" :active="request()->routeIs('journal-entries.*')">
+                        仕訳帳
                     </x-nav-link>
                     <x-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
                         固定資産管理台帳
                     </x-nav-link>
+                    <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
+                        予算・実績
+                    </x-nav-link>
+
+                    @if (Auth::user()->canManageMasters())
+                        <x-nav-link href="{{ route('management.index') }}" :active="$managementMenuIsActive">
+                            管理
+                        </x-nav-link>
+                    @endif
                 </div>
             </div>
 
@@ -108,12 +116,6 @@
                                 プロフィール
                             </x-dropdown-link>
 
-                            @if (Auth::user()->isAdmin())
-                                <x-dropdown-link href="{{ route('companies.index') }}">
-                                    会社情報管理
-                                </x-dropdown-link>
-                            @endif
-
                             @if (Laravel\Jetstream\Jetstream::hasApiFeatures())
                                 <x-dropdown-link href="{{ route('api-tokens.index') }}">
                                     {{ __('API Tokens') }}
@@ -151,15 +153,21 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
-            <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
-                ダッシュボード
-            </x-responsive-nav-link>
-            <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
-                予算・実績
+            <x-responsive-nav-link href="{{ route('journal-entries.index') }}" :active="request()->routeIs('journal-entries.*')">
+                仕訳帳
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
                 固定資産管理台帳
             </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
+                予算・実績
+            </x-responsive-nav-link>
+
+            @if (Auth::user()->canManageMasters())
+                <x-responsive-nav-link href="{{ route('management.index') }}" :active="$managementMenuIsActive">
+                    管理
+                </x-responsive-nav-link>
+            @endif
         </div>
 
         <!-- Responsive Settings Options -->
@@ -182,12 +190,6 @@
                 <x-responsive-nav-link href="{{ route('profile.show') }}" :active="request()->routeIs('profile.show')">
                     プロフィール
                 </x-responsive-nav-link>
-
-                @if (Auth::user()->isAdmin())
-                    <x-responsive-nav-link href="{{ route('companies.index') }}" :active="request()->routeIs('companies.*')">
-                        会社情報管理
-                    </x-responsive-nav-link>
-                @endif
 
                 @if (Laravel\Jetstream\Jetstream::hasApiFeatures())
                     <x-responsive-nav-link href="{{ route('api-tokens.index') }}" :active="request()->routeIs('api-tokens.index')">

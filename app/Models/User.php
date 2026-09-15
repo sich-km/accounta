@@ -24,6 +24,7 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'company_id',
+        'department_id',
         'user_type',
         'login_id',
         'name',
@@ -51,6 +52,11 @@ class User extends Authenticatable
     public function organization(): BelongsTo
     {
         return $this->belongsTo(Organization::class);
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(Department::class);
     }
 
     public function isAdmin(): bool

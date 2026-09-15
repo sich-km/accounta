@@ -6,6 +6,21 @@ use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
 
+test('monthly amount index uses the shared action menu', function () {
+    $user = User::factory()->create();
+    MonthlyAmount::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => Department::factory()->for($user->organization),
+        'management_account_id' => ManagementAccount::factory()->for($user->organization),
+    ]);
+
+    $this->actingAs($user)->get(route('amounts.index'))
+        ->assertSee('aria-label="操作メニューを開く"', false)
+        ->assertSee('x-teleport="body"', false)
+        ->assertSeeText('編集')
+        ->assertSeeText('削除');
+});
+
 test('users can create multiple monthly amount details for the same dimensions', function () {
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();

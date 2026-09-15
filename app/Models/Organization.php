@@ -60,4 +60,19 @@ class Organization extends Model
     {
         return $this->hasMany(FixedAsset::class);
     }
+
+    public function ledgerAccounts(): HasMany
+    {
+        return $this->hasMany(LedgerAccount::class);
+    }
+
+    public function journalEntries(): HasMany
+    {
+        return $this->hasMany(JournalEntry::class);
+    }
+
+    public function journalDocuments(): HasMany
+    {
+        return $this->hasMany(JournalDocument::class);
+    }
 }

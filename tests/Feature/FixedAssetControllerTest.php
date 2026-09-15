@@ -278,7 +278,12 @@ test('fixed assets from another organization are hidden and return 404', functio
         ->get(route('fixed-assets.index'))
         ->assertOk()
         ->assertSeeText($ownAsset->asset_name)
-        ->assertDontSeeText($otherAsset->asset_name);
+        ->assertDontSeeText($otherAsset->asset_name)
+        ->assertSee('aria-label="操作メニューを開く"', false)
+        ->assertSee('x-teleport="body"', false)
+        ->assertSeeText('詳細')
+        ->assertSeeText('編集')
+        ->assertSeeText('削除');
 
     $this->actingAs($user)->get(route('fixed-assets.show', $otherAsset))->assertNotFound();
     $this->actingAs($user)->get(route('fixed-assets.edit', $otherAsset))->assertNotFound();

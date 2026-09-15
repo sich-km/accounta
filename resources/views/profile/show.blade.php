@@ -20,7 +20,7 @@
                     </x-slot>
 
                     <x-slot name="description">
-                        現在所属している会社と組織の情報です。
+                        現在所属している会社・組織・部門の情報です。
                     </x-slot>
 
                     <x-slot name="content">
@@ -52,6 +52,8 @@
                                 </dd>
                             </div>
                         </dl>
+
+                        @livewire('profile.user-department-form')
                     </x-slot>
                 </x-action-section>
             </div>

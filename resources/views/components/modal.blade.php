@@ -1,7 +1,8 @@
-@props(['id', 'maxWidth'])
+@props(['id', 'maxWidth', 'standalone' => false])
 
 @php
-$id = $id ?? md5($attributes->wire('model'));
+$wireModel = $attributes->wire('model');
+$id = $id ?? md5((string) $wireModel);
 
 $maxWidth = [
     'sm' => 'sm:max-w-sm',
@@ -13,7 +14,12 @@ $maxWidth = [
 @endphp
 
 <div
-    x-data="{ show: @entangle($attributes->wire('model')) }"
+    @if ($standalone)
+        x-data="{ show: false }"
+    @else
+        x-data="{ show: @entangle($wireModel) }"
+    @endif
+    x-on:open-modal.window="if ($event.detail === {{ Js::from($id) }}) show = true"
     x-on:close.stop="show = false"
     x-on:keydown.escape.window="show = false"
     x-show="show"

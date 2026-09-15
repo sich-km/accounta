@@ -1,6 +1,9 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-gray-800">部門を編集</h2>
+        <div class="flex flex-wrap items-center gap-3">
+            <x-back-link href="{{ route('departments.index') }}">一覧へ戻る</x-back-link>
+            <h2 class="text-xl font-semibold leading-tight text-gray-800">部門を編集</h2>
+        </div>
     </x-slot>
 
     <div class="py-8">

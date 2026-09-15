@@ -31,7 +31,7 @@
                     <p class="mt-1 text-sm text-gray-600">現在の組織に登録されているデータ件数です。</p>
                 </div>
 
-                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <a href="{{ route('amounts.index') }}" class="rounded-xl border border-sky-100 bg-white p-5 shadow-sm transition hover:border-sky-200 hover:shadow-md">
                         <p class="text-sm font-medium text-gray-500">予算レコード</p>
                         <p class="mt-3 flex items-baseline gap-2">
@@ -60,6 +60,22 @@
                         <p class="text-sm font-medium text-gray-500">有効な予実管理科目</p>
                         <p class="mt-3 flex items-baseline gap-2">
                             <span class="text-3xl font-semibold text-indigo-600">{{ number_format($organization->active_management_accounts_count) }}</span>
+                            <span class="text-sm text-gray-500">件</span>
+                        </p>
+                    </div>
+
+                    <a href="{{ route('journal-entries.index') }}" class="rounded-xl border border-violet-100 bg-white p-5 shadow-sm transition hover:border-violet-200 hover:shadow-md">
+                        <p class="text-sm font-medium text-gray-500">仕訳</p>
+                        <p class="mt-3 flex items-baseline gap-2">
+                            <span class="text-3xl font-semibold text-violet-600">{{ number_format($organization->journal_entries_count) }}</span>
+                            <span class="text-sm text-gray-500">件</span>
+                        </p>
+                    </a>
+
+                    <div class="rounded-xl border border-fuchsia-100 bg-white p-5 shadow-sm">
+                        <p class="text-sm font-medium text-gray-500">有効な仕訳用勘定科目</p>
+                        <p class="mt-3 flex items-baseline gap-2">
+                            <span class="text-3xl font-semibold text-fuchsia-600">{{ number_format($organization->active_ledger_accounts_count) }}</span>
                             <span class="text-sm text-gray-500">件</span>
                         </p>
                     </div>
@@ -103,13 +119,17 @@
                 <h2 id="quick-actions" class="mb-4 text-xl font-semibold text-gray-900">メニュー</h2>
 
                 <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <a href="{{ route('amounts.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                        <h3 class="text-lg font-semibold text-gray-900">予算・実績</h3>
-                        <p class="mt-2 text-sm text-gray-600">月次の予算・実績明細を登録します。</p>
+                    <a href="{{ route('journal-entries.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-900">仕訳帳</h3>
+                        <p class="mt-2 text-sm text-gray-600">複合仕訳の登録と証憑の添付を行います。</p>
                     </a>
                     <a href="{{ route('fixed-assets.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
                         <h3 class="text-lg font-semibold text-gray-900">固定資産管理台帳</h3>
                         <p class="mt-2 text-sm text-gray-600">固定資産と減価償却の現在値を管理します。</p>
+                    </a>
+                    <a href="{{ route('amounts.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
+                        <h3 class="text-lg font-semibold text-gray-900">予算・実績</h3>
+                        <p class="mt-2 text-sm text-gray-600">月次の予算・実績明細を登録します。</p>
                     </a>
                     @unless (auth()->user()->isAdmin())
                         <a href="{{ route('profile.show') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
@@ -120,28 +140,6 @@
                 </div>
             </section>
 
-            @if (auth()->user()->canManageMasters())
-                <section aria-labelledby="management-menu">
-                    <h2 id="management-menu" class="mb-4 text-xl font-semibold text-gray-900">管理メニュー</h2>
-
-                    <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        <a href="{{ route('departments.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-900">部門マスタ</h3>
-                            <p class="mt-2 text-sm text-gray-600">入力に使用する部門を管理します。</p>
-                        </a>
-                        <a href="{{ route('management-accounts.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-900">予実管理科目マスタ</h3>
-                            <p class="mt-2 text-sm text-gray-600">予算・実績で使用する管理科目を管理します。</p>
-                        </a>
-                        @if (auth()->user()->isAdmin())
-                            <a href="{{ route('companies.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                                <h3 class="text-lg font-semibold text-gray-900">会社情報管理</h3>
-                                <p class="mt-2 text-sm text-gray-600">会社情報の登録・編集・削除を行います。</p>
-                            </a>
-                        @endif
-                    </div>
-                </section>
-            @endif
         </div>
     </div>
 </x-app-layout>

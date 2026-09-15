@@ -4,6 +4,10 @@ use App\Enums\UserType;
 use App\Exports\AccountaWorkbookExport;
 use App\Models\Department;
 use App\Models\FixedAsset;
+use App\Models\JournalDocument;
+use App\Models\JournalEntry;
+use App\Models\JournalEntryLine;
+use App\Models\LedgerAccount;
 use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use App\Models\Organization;
@@ -71,6 +75,25 @@ test('current organization data can be downloaded as an Excel workbook', functio
         'notes' => '=SUM(1,1)',
     ]);
     FixedAsset::factory()->create();
+    $cash = LedgerAccount::factory()->for($organization)->create([
+        'code' => '1000',
+        'name' => '=Cash',
+    ]);
+    $sales = LedgerAccount::factory()->for($organization)->create([
+        'code' => '4100',
+        'name' => '+Sales',
+    ]);
+    $journalEntry = JournalEntry::factory()->for($organization)->create([
+        'entry_date' => '2026-04-20',
+        'description' => '=ServiceSale',
+        'notes' => '@ExportNote',
+    ]);
+    $journalEntry->lines()->createMany([
+        ['organization_id' => $organization->id, 'line_number' => 1, 'ledger_account_id' => $cash->id, 'department_id' => null, 'side' => 'debit', 'amount' => '125000.50', 'description' => '-Deposit'],
+        ['organization_id' => $organization->id, 'line_number' => 2, 'ledger_account_id' => $sales->id, 'department_id' => $department->id, 'side' => 'credit', 'amount' => '125000.50', 'description' => '+Revenue'],
+    ]);
+    JournalDocument::factory()->for($journalEntry)->create(['organization_id' => $organization->id]);
+    JournalEntryLine::factory()->create();
 
     $this->travelTo(Carbon::create(2026, 9, 4, 13, 59, 0, 'Asia/Tokyo'));
 
@@ -88,6 +111,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($spreadsheet->getSheetNames())->toBe([
         '予算・実績',
         'FixedAssets',
+        'JournalEntries',
         '部門マスタ',
         '予実管理科目マスタ',
         '会社・組織情報',
@@ -163,6 +187,36 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($fixedAssets?->getColumnDimension('A')->getWidth())->toBe(18.0);
     expect($fixedAssets?->getColumnDimension('P')->getWidth())->toBe(40.0);
 
+    $journalEntries = $spreadsheet->getSheetByName('JournalEntries');
+
+    expect($journalEntries?->rangeToArray('A1:L1')[0])->toBe([
+        'JournalEntryId',
+        'EntryDate',
+        'Description',
+        'LineNumber',
+        'LedgerAccountCode',
+        'LedgerAccountName',
+        'DepartmentCode',
+        'DebitAmount',
+        'CreditAmount',
+        'LineDescription',
+        'Notes',
+        'DocumentCount',
+    ]);
+    expect($journalEntries?->getHighestDataRow())->toBe(3);
+    expect($journalEntries?->getCell('A2')->getValue())->toBe($journalEntry->id);
+    expect($journalEntries?->getCell('B2')->getFormattedValue())->toBe('2026-04-20');
+    expect($journalEntries?->getCell('C2')->getValue())->toBe('=ServiceSale');
+    expect($journalEntries?->getCell('C2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($journalEntries?->getCell('E2')->getValue())->toBe('1000');
+    expect($journalEntries?->getCell('F2')->getValue())->toBe('=Cash');
+    expect($journalEntries?->getCell('H2')->getValue())->toBe(125000.5);
+    expect($journalEntries?->getCell('I2')->getValue())->toBeNull();
+    expect($journalEntries?->getCell('G3')->getValue())->toBe('D002');
+    expect($journalEntries?->getCell('H3')->getValue())->toBeNull();
+    expect($journalEntries?->getCell('I3')->getValue())->toBe(125000.5);
+    expect($journalEntries?->getCell('L3')->getValue())->toBe(1);
+
     $departments = $spreadsheet->getSheetByName('部門マスタ');
 
     expect($departments?->rangeToArray('A1:C1')[0])->toBe([
@@ -234,12 +288,14 @@ test('organizations without records export all sheets with headings', function (
         expect($spreadsheet->getSheetNames())->toBe([
             '予算・実績',
             'FixedAssets',
+            'JournalEntries',
             '部門マスタ',
             '予実管理科目マスタ',
             '会社・組織情報',
         ]);
         expect($spreadsheet->getSheetByName('予算・実績')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('FixedAssets')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('JournalEntries')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('部門マスタ')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('予実管理科目マスタ')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('会社・組織情報')?->getHighestDataRow())->toBe(2);
@@ -263,6 +319,7 @@ test('non-admin workbooks omit company and organization information', function (
     expect($spreadsheet->getSheetNames())->toBe([
         '予算・実績',
         'FixedAssets',
+        'JournalEntries',
         '部門マスタ',
         '予実管理科目マスタ',
     ]);

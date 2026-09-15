@@ -20,6 +20,7 @@ class AccountaWorkbookExport implements Export, WithMultipleSheets
         $sheets = [
             new AmountsSheetExport($this->organizationId),
             new FixedAssetsSheetExport($this->organizationId),
+            new JournalEntriesSheetExport($this->organizationId),
             new DepartmentsSheetExport($this->organizationId),
             new ManagementAccountsSheetExport($this->organizationId),
         ];
