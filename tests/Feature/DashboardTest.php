@@ -417,11 +417,12 @@ test('dashboard compares the selected fiscal year budget and actual profit or lo
     ]);
 });
 
-test('dashboard summary components keep their fiscal year selections independent', function () {
+test('dashboard summary components persist their fiscal years independently across logins', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $company = Company::factory()->create(['fiscal_year_start_month' => 4]);
     $organization = Organization::factory()->for($company)->create();
     $user = User::factory()->for($organization)->create();
+    $otherUser = User::factory()->for($organization)->create();
     $department = Department::factory()->for($organization)->create();
     $managementAccount = ManagementAccount::factory()->for($organization)->create();
 
@@ -450,11 +451,30 @@ test('dashboard summary components keep their fiscal year selections independent
 
     $balanceSheet
         ->assertSet('fiscalYear', 2026)
-        ->set('fiscalYear', 2025)
-        ->assertSet('fiscalYear', 2025)
-        ->assertSeeText('2025年度末（2026/03/31現在）');
+        ->assertSeeText('2026年度末（2027/03/31現在）');
 
-    $budgetActual->assertSet('fiscalYear', 2026);
+    $budgetActual
+        ->set('fiscalYear', 2025)
+        ->assertSet('fiscalYear', 2025);
+
+    auth()->logout();
+    Livewire::actingAs($otherUser);
+
+    Livewire::test(ProfitAndLossSummary::class)
+        ->assertSet('fiscalYear', 2026);
+    Livewire::test(BudgetActualSummary::class)
+        ->assertSet('fiscalYear', 2026);
+
+    auth()->logout();
+    Livewire::actingAs($user);
+
+    Livewire::test(ProfitAndLossSummary::class)
+        ->assertSet('fiscalYear', 2025);
+    Livewire::test(BalanceSheetSummary::class)
+        ->assertSet('fiscalYear', 2026)
+        ->assertSeeText('2026年度末（2027/03/31現在）');
+    Livewire::test(BudgetActualSummary::class)
+        ->assertSet('fiscalYear', 2025);
 });
 
 test('the dashboard renders the management section and link for administrators', function (UserType $userType) {

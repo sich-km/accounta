@@ -5,6 +5,7 @@ namespace App\Livewire\Dashboard;
 use App\Models\JournalEntry;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\DashboardFiscalYearPreferenceService;
 use App\Services\FiscalYearService;
 use App\Services\ProfitAndLossSummaryService;
 use Illuminate\Contracts\View\View;
@@ -13,19 +14,31 @@ use Livewire\Component;
 
 class ProfitAndLossSummary extends Component
 {
+    private const string PREFERENCE_SECTION = 'profit-and-loss';
+
     public int $fiscalYear;
 
-    public function mount(FiscalYearService $fiscalYearService): void
-    {
-        $organization = $this->organization();
-        $this->fiscalYear = $fiscalYearService->current($this->fiscalYearStartMonth($organization));
+    public function mount(
+        FiscalYearService $fiscalYearService,
+        DashboardFiscalYearPreferenceService $preferenceService,
+    ): void {
+        $user = $this->user();
+        $organization = $this->organization($user);
+        $currentFiscalYear = $fiscalYearService->current($this->fiscalYearStartMonth($organization));
+        $this->fiscalYear = $preferenceService->getFiscalYear(
+            $user,
+            self::PREFERENCE_SECTION,
+            $currentFiscalYear,
+        );
     }
 
     public function render(
         FiscalYearService $fiscalYearService,
         ProfitAndLossSummaryService $profitAndLossSummaryService,
+        DashboardFiscalYearPreferenceService $preferenceService,
     ): View {
-        $organization = $this->organization();
+        $user = $this->user();
+        $organization = $this->organization($user);
         $fiscalYearStartMonth = $this->fiscalYearStartMonth($organization);
         $availableFiscalYears = $fiscalYearService->availableYears(
             JournalEntry::query()
@@ -35,6 +48,7 @@ class ProfitAndLossSummary extends Component
             $fiscalYearStartMonth,
         );
         $this->normalizeFiscalYear($availableFiscalYears, $fiscalYearService->current($fiscalYearStartMonth));
+        $preferenceService->putFiscalYear($user, self::PREFERENCE_SECTION, $this->fiscalYear);
         $profitAndLossSummary = $profitAndLossSummaryService->summarizeFiscalYear(
             $organization->id,
             $fiscalYearStartMonth,
@@ -95,14 +109,19 @@ class ProfitAndLossSummary extends Component
         return (int) $organization->company->fiscal_year_start_month;
     }
 
-    private function organization(): Organization
+    private function organization(User $user): Organization
+    {
+        return $user->organization()
+            ->with('company:id,name,fiscal_year_start_month')
+            ->firstOrFail();
+    }
+
+    private function user(): User
     {
         $user = Auth::user();
 
         abort_unless($user instanceof User, 401);
 
-        return $user->organization()
-            ->with('company:id,name,fiscal_year_start_month')
-            ->firstOrFail();
+        return $user;
     }
 }
