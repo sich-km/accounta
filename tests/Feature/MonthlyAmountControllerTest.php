@@ -107,6 +107,7 @@ test('monthly amounts can be filtered by type year and month within the organiza
         ->assertViewHas('selectedMonth', 4)
         ->assertViewHas('availableYears', [2027, 2026])
         ->assertSee('aria-label="予算・実績の該当件数：1件"', false)
+        ->assertSee('href="'.route('amounts.index', ['reset_filters' => 1]).'"', false)
         ->assertSeeText('2026年4月実績')
         ->assertDontSeeText('2026年4月予算')
         ->assertDontSeeText('2026年5月実績')
@@ -168,6 +169,92 @@ test('monthly amounts can be filtered by department and management account', fun
         ->assertSeeText('部門・科目ともに一致')
         ->assertDontSeeText('部門が不一致')
         ->assertDontSeeText('科目が不一致');
+});
+
+test('monthly amount filter preferences persist after logout and login and remain user specific', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create(['login_id' => 'monthly.amount.user']);
+    $department = Department::factory()->for($user->organization)->create();
+    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    MonthlyAmount::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => $department->id,
+        'management_account_id' => $managementAccount->id,
+        'period' => '2025-04-01',
+        'type' => 'actual',
+        'memo' => '保存条件の対象予実',
+    ]);
+    $otherUser = User::factory()->create(['login_id' => 'other.monthly.amount.user']);
+
+    $this->actingAs($user)->get(route('amounts.index', [
+        'type' => 'actual',
+        'year' => 2025,
+        'month' => 4,
+        'department_id' => $department->id,
+        'management_account_id' => $managementAccount->id,
+        'per_page' => 100,
+    ]));
+
+    $this->post(route('logout'))->assertRedirect('/');
+    $this->post('/login', [
+        'login_id' => $user->login_id,
+        'password' => 'password',
+    ])->assertRedirect(route('dashboard', absolute: false));
+
+    $this->get(route('amounts.index'))
+        ->assertViewHas('selectedType', 'actual')
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('selectedMonth', 4)
+        ->assertViewHas('selectedDepartmentId', $department->id)
+        ->assertViewHas('selectedManagementAccountId', $managementAccount->id)
+        ->assertViewHas('selectedPerPage', 100)
+        ->assertSeeText('保存条件の対象予実');
+
+    $this->actingAs($otherUser)->get(route('amounts.index'))
+        ->assertViewHas('selectedType', null)
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedPerPage', 50);
+});
+
+test('monthly amount filters can clear remembered preferences', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create();
+    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    MonthlyAmount::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => $department->id,
+        'management_account_id' => $managementAccount->id,
+        'period' => '2025-04-01',
+    ]);
+
+    $this->actingAs($user)->get(route('amounts.index', [
+        'type' => 'budget',
+        'year' => 2025,
+        'month' => 4,
+        'department_id' => $department->id,
+        'management_account_id' => $managementAccount->id,
+        'per_page' => 100,
+    ]));
+
+    $this->get(route('amounts.index', ['reset_filters' => 1]))
+        ->assertViewHas('selectedType', null)
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedPerPage', 50);
+
+    $this->get(route('amounts.index'))
+        ->assertViewHas('selectedType', null)
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedPerPage', 50);
 });
 
 test('monthly amount index defaults to the current fiscal year based on the company start month', function () {

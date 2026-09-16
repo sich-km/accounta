@@ -347,7 +347,80 @@ test('fixed assets can be filtered by acquisition year category department and s
         ->assertSee('name="asset_category"', false)
         ->assertSee('name="department_id"', false)
         ->assertSee('name="status"', false)
+        ->assertSee('href="'.route('fixed-assets.index', ['reset_filters' => 1]).'"', false)
         ->assertSeeText('クリア');
+});
+
+test('fixed asset filter preferences persist after logout and login and remain user specific', function () {
+    $user = User::factory()->create(['login_id' => 'fixed.asset.user']);
+    $department = Department::factory()->for($user->organization)->create();
+    FixedAsset::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => $department->id,
+        'asset_name' => '保存条件の対象資産',
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'software',
+        'status' => 'held',
+    ]);
+    $otherUser = User::factory()->create(['login_id' => 'other.fixed.asset.user']);
+
+    $this->actingAs($user)->get(route('fixed-assets.index', [
+        'acquisition_year' => 2025,
+        'asset_category' => 'software',
+        'department_id' => $department->id,
+        'status' => 'held',
+    ]));
+
+    $this->post(route('logout'))->assertRedirect('/');
+    $this->post('/login', [
+        'login_id' => $user->login_id,
+        'password' => 'password',
+    ])->assertRedirect(route('dashboard', absolute: false));
+
+    $this->get(route('fixed-assets.index'))
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('selectedAssetCategory', 'software')
+        ->assertViewHas('selectedDepartmentId', $department->id)
+        ->assertViewHas('selectedStatus', 'held')
+        ->assertSeeText('保存条件の対象資産');
+
+    $this->actingAs($otherUser)->get(route('fixed-assets.index'))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedAssetCategory', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedStatus', null);
+});
+
+test('fixed asset filters can clear remembered preferences', function () {
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create();
+    FixedAsset::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => $department->id,
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'software',
+        'status' => 'held',
+    ]);
+
+    $this->actingAs($user)->get(route('fixed-assets.index', [
+        'acquisition_year' => 2025,
+        'asset_category' => 'software',
+        'department_id' => $department->id,
+        'status' => 'held',
+    ]));
+
+    $this->get(route('fixed-assets.index', ['reset_filters' => 1]))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedAssetCategory', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedStatus', null)
+        ->assertViewHas('hasActiveFilters', false);
+
+    $this->get(route('fixed-assets.index'))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedAssetCategory', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedStatus', null);
 });
 
 test('fixed asset filters ignore unsupported values and departments from another organization', function () {

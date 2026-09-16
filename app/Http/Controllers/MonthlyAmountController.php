@@ -12,12 +12,15 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class MonthlyAmountController extends Controller
 {
     /** @var list<int> */
     private const array PER_PAGE_OPTIONS = [50, 100, 150, 200];
+
+    private const string PREFERENCES_CACHE_PREFIX = 'monthly-amounts:index-preferences:user:';
 
     public function index(Request $request, FiscalYearService $fiscalYearService): View
     {
@@ -43,22 +46,65 @@ class MonthlyAmountController extends Controller
             ->orderBy('code')
             ->get(['id', 'code', 'name']);
 
-        $selectedType = $this->selectedType($request->query('type'));
+        $preferencesCacheKey = self::PREFERENCES_CACHE_PREFIX.$request->user()->getAuthIdentifier();
+        $preferenceKeys = ['type', 'year', 'month', 'department_id', 'management_account_id', 'per_page'];
+        $defaultPreferences = [
+            'type' => null,
+            'year' => $currentFiscalYear,
+            'month' => null,
+            'department_id' => null,
+            'management_account_id' => null,
+            'per_page' => self::PER_PAGE_OPTIONS[0],
+        ];
+
+        if ($request->boolean('reset_filters')) {
+            Cache::forget($preferencesCacheKey);
+        }
+
+        $storedPreferences = Cache::get($preferencesCacheKey, []);
+        $requestedPreferences = match (true) {
+            $request->boolean('reset_filters') => $defaultPreferences,
+            $request->hasAny($preferenceKeys) => array_replace(
+                $defaultPreferences,
+                $request->only($preferenceKeys),
+            ),
+            is_array($storedPreferences) && $storedPreferences !== [] => array_replace(
+                $defaultPreferences,
+                $storedPreferences,
+            ),
+            default => $defaultPreferences,
+        };
+
+        $selectedType = $this->selectedType($requestedPreferences['type']);
         $selectedYear = $this->selectedYear(
-            $request->has('year') ? $request->query('year') : $currentFiscalYear,
+            $requestedPreferences['year'],
             $availableYears,
             $currentFiscalYear,
         );
-        $selectedMonth = $this->selectedMonth($request->query('month'), $selectedYear);
+        $selectedMonth = $this->selectedMonth($requestedPreferences['month'], $selectedYear);
         $selectedDepartmentId = $this->selectedMasterId(
-            $request->query('department_id'),
+            $requestedPreferences['department_id'],
             $departments->pluck('id')->all(),
         );
         $selectedManagementAccountId = $this->selectedMasterId(
-            $request->query('management_account_id'),
+            $requestedPreferences['management_account_id'],
             $managementAccounts->pluck('id')->all(),
         );
-        $selectedPerPage = $this->selectedPerPage($request->query('per_page'));
+        $selectedPerPage = $this->selectedPerPage($requestedPreferences['per_page']);
+
+        $normalizedPreferences = [
+            'type' => $selectedType,
+            'year' => $selectedYear,
+            'month' => $selectedMonth,
+            'department_id' => $selectedDepartmentId,
+            'management_account_id' => $selectedManagementAccountId,
+            'per_page' => $selectedPerPage,
+        ];
+
+        if ($storedPreferences !== $normalizedPreferences) {
+            Cache::forever($preferencesCacheKey, $normalizedPreferences);
+        }
+
         $dateRange = $selectedYear === null
             ? null
             : $this->fiscalYearDateRange(

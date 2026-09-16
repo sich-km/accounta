@@ -82,7 +82,7 @@
                         <x-button type="submit" class="text-sm">表示</x-button>
 
                         @if ($hasActiveFilters)
-                            <a href="{{ route('fixed-assets.index') }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
+                            <a href="{{ route('fixed-assets.index', ['reset_filters' => 1]) }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
                                 クリア
                             </a>
                         @endif

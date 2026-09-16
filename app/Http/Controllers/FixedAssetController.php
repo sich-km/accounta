@@ -11,10 +11,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class FixedAssetController extends Controller
 {
+    private const string PREFERENCES_CACHE_PREFIX = 'fixed-assets:index-preferences:user:';
+
     public function index(Request $request): View
     {
         $organizationId = $request->user()->organization_id;
@@ -32,10 +35,49 @@ class FixedAssetController extends Controller
             ->forOrganization($organizationId)
             ->orderBy('code')
             ->get(['id', 'code', 'name']);
-        $selectedYear = $this->selectedInteger($request->query('acquisition_year'), $availableYears);
-        $selectedAssetCategory = $this->selectedKey($request->query('asset_category'), FixedAsset::ASSET_CATEGORIES);
-        $selectedDepartmentId = $this->selectedInteger($request->query('department_id'), $departments->modelKeys());
-        $selectedStatus = $this->selectedKey($request->query('status'), FixedAsset::STATUSES);
+
+        $preferencesCacheKey = self::PREFERENCES_CACHE_PREFIX.$request->user()->getAuthIdentifier();
+        $preferenceKeys = ['acquisition_year', 'asset_category', 'department_id', 'status'];
+        $defaultPreferences = [
+            'acquisition_year' => null,
+            'asset_category' => null,
+            'department_id' => null,
+            'status' => null,
+        ];
+
+        if ($request->boolean('reset_filters')) {
+            Cache::forget($preferencesCacheKey);
+        }
+
+        $storedPreferences = Cache::get($preferencesCacheKey, []);
+        $requestedPreferences = match (true) {
+            $request->boolean('reset_filters') => $defaultPreferences,
+            $request->hasAny($preferenceKeys) => array_replace(
+                $defaultPreferences,
+                $request->only($preferenceKeys),
+            ),
+            is_array($storedPreferences) && $storedPreferences !== [] => array_replace(
+                $defaultPreferences,
+                $storedPreferences,
+            ),
+            default => $defaultPreferences,
+        };
+
+        $selectedYear = $this->selectedInteger($requestedPreferences['acquisition_year'], $availableYears);
+        $selectedAssetCategory = $this->selectedKey($requestedPreferences['asset_category'], FixedAsset::ASSET_CATEGORIES);
+        $selectedDepartmentId = $this->selectedInteger($requestedPreferences['department_id'], $departments->modelKeys());
+        $selectedStatus = $this->selectedKey($requestedPreferences['status'], FixedAsset::STATUSES);
+
+        $normalizedPreferences = [
+            'acquisition_year' => $selectedYear,
+            'asset_category' => $selectedAssetCategory,
+            'department_id' => $selectedDepartmentId,
+            'status' => $selectedStatus,
+        ];
+
+        if ($storedPreferences !== $normalizedPreferences) {
+            Cache::forever($preferencesCacheKey, $normalizedPreferences);
+        }
 
         $fixedAssets = $baseQuery
             ->when($selectedYear !== null, fn (Builder $query): Builder => $query->whereBetween('acquisition_date', [
