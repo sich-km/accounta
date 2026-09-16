@@ -201,6 +201,7 @@ test('journal entry index maps a selected month to its calendar year within the 
     ]))
         ->assertViewHas('selectedYear', 2025)
         ->assertViewHas('selectedMonth', 2)
+        ->assertSee('aria-label="仕訳の該当件数：1件"', false)
         ->assertSeeText('2025年度2月の仕訳')
         ->assertDontSeeText('2024年度2月の仕訳');
 });

@@ -90,6 +90,8 @@
                 </form>
             </div>
 
+            <x-list-result-count :count="$fixedAssets->total()" label="固定資産の該当件数" />
+
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">
                     <table class="w-full min-w-[72rem] divide-y divide-gray-200">

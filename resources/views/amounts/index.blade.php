@@ -39,7 +39,7 @@
                     </div>
 
                     <div>
-                        <x-label for="year" value="対象年" class="font-semibold text-gray-800" />
+                        <x-label for="year" value="対象年度" class="font-semibold text-gray-800" />
                         <select
                             id="year"
                             name="year"
@@ -49,7 +49,7 @@
                         >
                             <option value="">すべて</option>
                             @foreach ($availableYears as $year)
-                                <option value="{{ $year }}" @selected($selectedYear === $year)>{{ $year }}年</option>
+                                <option value="{{ $year }}" @selected($selectedYear === $year)>{{ $year }}年度</option>
                             @endforeach
                         </select>
                     </div>
@@ -64,7 +64,7 @@
                             x-bind:disabled="selectedYear === ''"
                         >
                             <option value="">すべて</option>
-                            @foreach (range(1, 12) as $month)
+                            @foreach ($fiscalYearMonths as $month)
                                 <option value="{{ $month }}" @selected($selectedMonth === $month)>{{ $month }}月</option>
                             @endforeach
                         </select>
@@ -120,7 +120,7 @@
                     <div class="flex items-center gap-2">
                         <x-button type="submit" class="text-sm">表示</x-button>
 
-                        @if ($selectedType !== null || $selectedYear !== null || $selectedMonth !== null || $selectedDepartmentId !== null || $selectedManagementAccountId !== null || $selectedPerPage !== $perPageOptions[0])
+                        @if ($selectedType !== null || $selectedYear !== $currentFiscalYear || $selectedMonth !== null || $selectedDepartmentId !== null || $selectedManagementAccountId !== null || $selectedPerPage !== $perPageOptions[0])
                             <a href="{{ route('amounts.index') }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
                                 クリア
                             </a>
@@ -128,6 +128,8 @@
                     </div>
                 </form>
             </div>
+
+            <x-list-result-count :count="$amounts->total()" label="予算・実績の該当件数" />
 
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">

@@ -5,16 +5,21 @@ use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 
 test('monthly amount index uses the shared action menu', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     MonthlyAmount::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => Department::factory()->for($user->organization),
         'management_account_id' => ManagementAccount::factory()->for($user->organization),
+        'period' => '2026-04-01',
     ]);
 
     $this->actingAs($user)->get(route('amounts.index'))
+        ->assertViewHas('currentFiscalYear', 2026)
+        ->assertViewHas('selectedYear', 2026)
         ->assertSee('<a href="'.route('amounts.create').'"', false)
         ->assertSee('name="type"', false)
         ->assertSee('name="year"', false)
@@ -23,7 +28,7 @@ test('monthly amount index uses the shared action menu', function () {
         ->assertSee('name="management_account_id"', false)
         ->assertSee('name="per_page"', false)
         ->assertSeeText('区分')
-        ->assertSeeText('対象年')
+        ->assertSeeText('対象年度')
         ->assertSeeText('対象月')
         ->assertSeeText('部門')
         ->assertSeeText('予実管理科目')
@@ -40,6 +45,7 @@ test('monthly amount index uses the shared action menu', function () {
 });
 
 test('monthly amount index supports the selected page size', function (int $perPage) {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
     $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
@@ -49,6 +55,7 @@ test('monthly amount index supports the selected page size', function (int $perP
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
             'management_account_id' => $managementAccount->id,
+            'period' => '2026-04-01',
         ]);
 
     $response = $this->actingAs($user)->get(route('amounts.index', [
@@ -99,6 +106,7 @@ test('monthly amounts can be filtered by type year and month within the organiza
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', 4)
         ->assertViewHas('availableYears', [2027, 2026])
+        ->assertSee('aria-label="予算・実績の該当件数：1件"', false)
         ->assertSeeText('2026年4月実績')
         ->assertDontSeeText('2026年4月予算')
         ->assertDontSeeText('2026年5月実績')
@@ -107,6 +115,7 @@ test('monthly amounts can be filtered by type year and month within the organiza
 });
 
 test('monthly amounts can be filtered by department and management account', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $targetDepartment = Department::factory()->for($user->organization)->create([
         'code' => 'D100',
@@ -144,6 +153,7 @@ test('monthly amounts can be filtered by department and management account', fun
     ] as $attributes) {
         MonthlyAmount::factory()->create([
             'organization_id' => $user->organization_id,
+            'period' => '2026-04-01',
             ...$attributes,
         ]);
     }
@@ -160,15 +170,18 @@ test('monthly amounts can be filtered by department and management account', fun
         ->assertDontSeeText('科目が不一致');
 });
 
-test('selecting only a year shows all monthly amounts in that year', function () {
+test('monthly amount index defaults to the current fiscal year based on the company start month', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 2, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
+    $user->company->update(['fiscal_year_start_month' => 4]);
     $department = Department::factory()->for($user->organization)->create();
     $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
 
     foreach ([
-        ['period' => '2026-04-01', 'memo' => '2026年4月'],
-        ['period' => '2026-12-01', 'memo' => '2026年12月'],
-        ['period' => '2027-01-01', 'memo' => '2027年1月'],
+        ['period' => '2025-03-01', 'memo' => '前年度の予実'],
+        ['period' => '2025-04-01', 'memo' => '当年度開始月の予実'],
+        ['period' => '2026-03-01', 'memo' => '当年度終了月の予実'],
+        ['period' => '2026-04-01', 'memo' => '翌年度の予実'],
     ] as $attributes) {
         MonthlyAmount::factory()->create([
             'organization_id' => $user->organization_id,
@@ -179,13 +192,73 @@ test('selecting only a year shows all monthly amounts in that year', function ()
     }
 
     $this->actingAs($user)
-        ->get(route('amounts.index', ['year' => 2026]))
-        ->assertSeeText('2026年4月')
-        ->assertSeeText('2026年12月')
-        ->assertDontSeeText('2027年1月');
+        ->get(route('amounts.index'))
+        ->assertViewHas('currentFiscalYear', 2025)
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('availableYears', [2026, 2025, 2024])
+        ->assertViewHas('fiscalYearMonths', [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
+        ->assertSeeText('対象年度')
+        ->assertSeeText('2025年度')
+        ->assertSeeText('当年度開始月の予実')
+        ->assertSeeText('当年度終了月の予実')
+        ->assertDontSeeText('前年度の予実')
+        ->assertDontSeeText('翌年度の予実');
+});
+
+test('selecting a fiscal year and month maps the month to the correct calendar year', function () {
+    $user = User::factory()->create();
+    $user->company->update(['fiscal_year_start_month' => 4]);
+    $department = Department::factory()->for($user->organization)->create();
+    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+
+    foreach ([
+        ['period' => '2026-02-01', 'memo' => '2025年度2月の予実'],
+        ['period' => '2027-02-01', 'memo' => '2026年度2月の予実'],
+    ] as $attributes) {
+        MonthlyAmount::factory()->create([
+            'organization_id' => $user->organization_id,
+            'department_id' => $department->id,
+            'management_account_id' => $managementAccount->id,
+            ...$attributes,
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('amounts.index', ['year' => 2026, 'month' => 2]))
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', 2)
+        ->assertSeeText('2026年度2月の予実')
+        ->assertDontSeeText('2025年度2月の予実');
+});
+
+test('monthly amount index can show records from every fiscal year', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create();
+    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+
+    foreach ([
+        ['period' => '2025-04-01', 'memo' => '2025年度の予実'],
+        ['period' => '2026-04-01', 'memo' => '2026年度の予実'],
+    ] as $attributes) {
+        MonthlyAmount::factory()->create([
+            'organization_id' => $user->organization_id,
+            'department_id' => $department->id,
+            'management_account_id' => $managementAccount->id,
+            ...$attributes,
+        ]);
+    }
+
+    $this->actingAs($user)
+        ->get(route('amounts.index', ['year' => '']))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedMonth', null)
+        ->assertSeeText('2025年度の予実')
+        ->assertSeeText('2026年度の予実');
 });
 
 test('invalid monthly amount filters are ignored', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $otherDepartment = Department::factory()->create([
         'code' => 'OTHER-D',
@@ -213,7 +286,7 @@ test('invalid monthly amount filters are ignored', function () {
             'per_page' => 1000,
         ]))
         ->assertViewHas('selectedType', null)
-        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedDepartmentId', null)
         ->assertViewHas('selectedManagementAccountId', null)

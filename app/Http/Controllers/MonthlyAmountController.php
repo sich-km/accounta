@@ -7,6 +7,7 @@ use App\Http\Requests\UpdateMonthlyAmountRequest;
 use App\Models\Department;
 use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
+use App\Services\FiscalYearService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
@@ -18,19 +19,21 @@ class MonthlyAmountController extends Controller
     /** @var list<int> */
     private const array PER_PAGE_OPTIONS = [50, 100, 150, 200];
 
-    public function index(Request $request): View
+    public function index(Request $request, FiscalYearService $fiscalYearService): View
     {
         $organizationId = $request->user()->organization_id;
-        $availableYears = MonthlyAmount::query()
+        $fiscalYearStartMonth = (int) $request->user()->company()->value('fiscal_year_start_month');
+        $currentFiscalYear = $fiscalYearService->current($fiscalYearStartMonth);
+        $availablePeriods = MonthlyAmount::query()
             ->forOrganization($organizationId)
             ->select('period')
             ->distinct()
             ->orderByDesc('period')
-            ->pluck('period')
-            ->map(fn (string $period): int => CarbonImmutable::parse($period)->year)
-            ->unique()
-            ->values()
-            ->all();
+            ->pluck('period');
+        $availableYears = $fiscalYearService->availableYears(
+            $availablePeriods,
+            $fiscalYearStartMonth,
+        );
         $departments = Department::query()
             ->forOrganization($organizationId)
             ->orderBy('code')
@@ -41,7 +44,11 @@ class MonthlyAmountController extends Controller
             ->get(['id', 'code', 'name']);
 
         $selectedType = $this->selectedType($request->query('type'));
-        $selectedYear = $this->selectedYear($request->query('year'), $availableYears);
+        $selectedYear = $this->selectedYear(
+            $request->has('year') ? $request->query('year') : $currentFiscalYear,
+            $availableYears,
+            $currentFiscalYear,
+        );
         $selectedMonth = $this->selectedMonth($request->query('month'), $selectedYear);
         $selectedDepartmentId = $this->selectedMasterId(
             $request->query('department_id'),
@@ -52,20 +59,20 @@ class MonthlyAmountController extends Controller
             $managementAccounts->pluck('id')->all(),
         );
         $selectedPerPage = $this->selectedPerPage($request->query('per_page'));
+        $dateRange = $selectedYear === null
+            ? null
+            : $this->fiscalYearDateRange(
+                $selectedYear,
+                $fiscalYearStartMonth,
+                $selectedMonth,
+            );
 
         $amounts = MonthlyAmount::query()
             ->forOrganization($organizationId)
             ->when($selectedType !== null, fn ($query) => $query->where('type', $selectedType))
             ->when($selectedDepartmentId !== null, fn ($query) => $query->where('department_id', $selectedDepartmentId))
             ->when($selectedManagementAccountId !== null, fn ($query) => $query->where('management_account_id', $selectedManagementAccountId))
-            ->when($selectedYear !== null, function ($query) use ($selectedMonth, $selectedYear): void {
-                $periodStart = CarbonImmutable::create($selectedYear, $selectedMonth ?? 1, 1);
-                $periodEnd = $selectedMonth === null
-                    ? $periodStart->endOfYear()
-                    : $periodStart->endOfMonth();
-
-                $query->whereBetween('period', [$periodStart->toDateString(), $periodEnd->toDateString()]);
-            })
+            ->when($dateRange !== null, fn ($query) => $query->whereBetween('period', $dateRange))
             ->with(['department', 'managementAccount'])
             ->orderByDesc('period')
             ->orderByDesc('id')
@@ -76,6 +83,11 @@ class MonthlyAmountController extends Controller
             'amounts' => $amounts,
             'amountTypes' => MonthlyAmount::TYPES,
             'availableYears' => $availableYears,
+            'currentFiscalYear' => $currentFiscalYear,
+            'fiscalYearMonths' => array_merge(
+                range($fiscalYearStartMonth, 12),
+                $fiscalYearStartMonth === 1 ? [] : range(1, $fiscalYearStartMonth - 1),
+            ),
             'departments' => $departments,
             'managementAccounts' => $managementAccounts,
             'perPageOptions' => self::PER_PAGE_OPTIONS,
@@ -188,13 +200,17 @@ class MonthlyAmountController extends Controller
     /**
      * @param  list<int>  $availableYears
      */
-    private function selectedYear(mixed $year, array $availableYears): ?int
+    private function selectedYear(mixed $year, array $availableYears, int $currentFiscalYear): ?int
     {
+        if ($year === null || $year === '') {
+            return null;
+        }
+
         $selectedYear = filter_var($year, FILTER_VALIDATE_INT);
 
         return $selectedYear !== false && in_array($selectedYear, $availableYears, true)
             ? $selectedYear
-            : null;
+            : $currentFiscalYear;
     }
 
     private function selectedMonth(mixed $month, ?int $selectedYear): ?int
@@ -229,5 +245,33 @@ class MonthlyAmountController extends Controller
         return $selectedPerPage !== false && in_array($selectedPerPage, self::PER_PAGE_OPTIONS, true)
             ? $selectedPerPage
             : self::PER_PAGE_OPTIONS[0];
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function fiscalYearDateRange(
+        int $fiscalYear,
+        int $fiscalYearStartMonth,
+        ?int $selectedMonth,
+    ): array {
+        if ($selectedMonth === null) {
+            $periodStart = CarbonImmutable::create($fiscalYear, $fiscalYearStartMonth, 1);
+
+            return [
+                $periodStart->toDateString(),
+                $periodStart->addYear()->subDay()->toDateString(),
+            ];
+        }
+
+        $calendarYear = $selectedMonth >= $fiscalYearStartMonth
+            ? $fiscalYear
+            : $fiscalYear + 1;
+        $periodStart = CarbonImmutable::create($calendarYear, $selectedMonth, 1);
+
+        return [
+            $periodStart->toDateString(),
+            $periodStart->endOfMonth()->toDateString(),
+        ];
     }
 }

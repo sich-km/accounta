@@ -337,6 +337,7 @@ test('fixed assets can be filtered by acquisition year category department and s
         ->assertViewHas('selectedAssetCategory', 'software')
         ->assertViewHas('selectedDepartmentId', $targetDepartment->id)
         ->assertViewHas('selectedStatus', 'held')
+        ->assertSee('aria-label="固定資産の該当件数：1件"', false)
         ->assertSeeText($matchingAsset->asset_name)
         ->assertDontSeeText('取得年度不一致資産')
         ->assertDontSeeText('資産区分不一致資産')

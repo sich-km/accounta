@@ -102,6 +102,8 @@
                 </form>
             </div>
 
+            <x-list-result-count :count="$journalEntries->total()" label="仕訳の該当件数" />
+
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
