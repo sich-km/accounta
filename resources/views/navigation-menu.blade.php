@@ -26,6 +26,9 @@
                     <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
                         予実管理
                     </x-nav-link>
+                    <x-nav-link href="{{ route('accounting-study.index') }}" :active="request()->routeIs('accounting-study.*')">
+                        会計学習
+                    </x-nav-link>
 
                     @if (Auth::user()->canManageMasters())
                         <x-nav-link href="{{ route('management.index') }}" :active="$managementMenuIsActive">
@@ -167,6 +170,9 @@
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
                 予実管理
+            </x-responsive-nav-link>
+            <x-responsive-nav-link href="{{ route('accounting-study.index') }}" :active="request()->routeIs('accounting-study.*')">
+                会計学習
             </x-responsive-nav-link>
 
             @if (Auth::user()->canManageMasters())

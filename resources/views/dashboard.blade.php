@@ -85,42 +85,6 @@
                 </div>
             </section>
 
-            <section aria-labelledby="accounting-study-summary">
-                <div class="mb-4">
-                    <h2 id="accounting-study-summary" class="text-xl font-semibold text-gray-900">会計学習</h2>
-                    <p class="mt-1 text-base text-gray-700">財務諸表論の理論学習機能は今後実装します。</p>
-                </div>
-
-                <div class="rounded-xl border border-dashed border-gray-300 bg-white p-8 text-center shadow-sm">
-                    <p class="text-base font-semibold text-gray-700">学習データはまだありません</p>
-                    <p class="mt-2 text-sm text-gray-600">問題生成、定着度判定および学習進捗管理の準備中です。</p>
-                </div>
-            </section>
-
-            <section aria-labelledby="quick-actions">
-                <h2 id="quick-actions" class="mb-4 text-xl font-semibold text-gray-900">メニュー</h2>
-
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-                    <a href="{{ route('journal-entries.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                        <h3 class="text-lg font-semibold text-gray-900">仕訳帳</h3>
-                        <p class="mt-2 text-sm text-gray-600">複合仕訳の登録と証憑の添付を行います。</p>
-                    </a>
-                    <a href="{{ route('fixed-assets.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                        <h3 class="text-lg font-semibold text-gray-900">固定資産管理台帳</h3>
-                        <p class="mt-2 text-sm text-gray-600">固定資産と減価償却の現在値を管理します。</p>
-                    </a>
-                    <a href="{{ route('amounts.index') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                        <h3 class="text-lg font-semibold text-gray-900">予算・実績</h3>
-                        <p class="mt-2 text-sm text-gray-600">月次の予算・実績明細を登録します。</p>
-                    </a>
-                    @unless (auth()->user()->isAdmin())
-                        <a href="{{ route('profile.show') }}" class="rounded-lg bg-white p-6 shadow-sm transition hover:shadow-md">
-                            <h3 class="text-lg font-semibold text-gray-900">組織情報</h3>
-                            <p class="mt-2 text-sm text-gray-600">所属している会社と組織を確認します。</p>
-                        </a>
-                    @endunless
-                </div>
-            </section>
         </div>
     </div>
 </x-app-layout>

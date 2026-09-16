@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountingStudyController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ExcelExportController;
@@ -90,6 +91,9 @@ Route::middleware([
 
     Route::resource('amounts', MonthlyAmountController::class)
         ->except('show');
+
+    Route::get('/accounting-study', AccountingStudyController::class)
+        ->name('accounting-study.index');
 
     Route::resource('fixed-assets', FixedAssetController::class);
 });
