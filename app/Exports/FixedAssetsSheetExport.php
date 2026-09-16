@@ -95,7 +95,7 @@ class FixedAssetsSheetExport extends DefaultValueBinder implements FromQuery, Wi
 
     public function title(): string
     {
-        return 'FixedAssets';
+        return '固定資産管理台帳';
     }
 
     /** @return array<string, float|int> */

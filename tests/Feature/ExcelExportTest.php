@@ -12,6 +12,8 @@ use App\Models\ManagementAccount;
 use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
+use App\Services\FiscalYearService;
+use App\Services\ProfitAndLossSummaryService;
 use Illuminate\Support\Carbon;
 use Maatwebsite\Excel\Excel as ExcelWriter;
 use Maatwebsite\Excel\Facades\Excel;
@@ -78,10 +80,14 @@ test('current organization data can be downloaded as an Excel workbook', functio
     $cash = LedgerAccount::factory()->for($organization)->create([
         'code' => '1000',
         'name' => '=Cash',
+        'account_type' => 'asset',
+        'normal_balance' => 'debit',
     ]);
     $sales = LedgerAccount::factory()->for($organization)->create([
         'code' => '4100',
         'name' => '+Sales',
+        'account_type' => 'revenue',
+        'normal_balance' => 'credit',
     ]);
     $journalEntry = JournalEntry::factory()->for($organization)->create([
         'entry_date' => '2026-04-20',
@@ -109,15 +115,35 @@ test('current organization data can be downloaded as an Excel workbook', functio
     $this->travelBack();
 
     expect($spreadsheet->getSheetNames())->toBe([
-        '予算・実績',
-        'FixedAssets',
-        'JournalEntries',
+        'まとめ',
+        '仕訳帳',
+        '固定資産管理台帳',
+        '予実管理',
         '部門マスタ',
         '予実管理科目マスタ',
         '会社・組織情報',
     ]);
 
-    $amounts = $spreadsheet->getSheetByName('予算・実績');
+    $summary = $spreadsheet->getSheetByName('まとめ');
+
+    expect($summary?->getCell('A2')->getValue())->toBe('対象年度');
+    expect($summary?->getCell('B2')->getValue())->toBe('2026年度');
+    expect($summary?->getCell('A5')->getValue())->toBe('P/Lまとめ');
+    expect($summary?->getCell('B7')->getValue())->toBe(125000.5);
+    expect($summary?->getCell('B8')->getValue())->toBe(0.0);
+    expect($summary?->getCell('B11')->getValue())->toBe(125000.5);
+    expect($summary?->getCell('A13')->getValue())->toBe('B/Sまとめ');
+    expect($summary?->getCell('B15')->getValue())->toBe(125000.5);
+    expect($summary?->getCell('B18')->getValue())->toBe(0.0);
+    expect($summary?->getCell('B19')->getValue())->toBe(125000.5);
+    expect($summary?->getCell('A22')->getValue())->toBe('予実まとめ');
+    expect($summary?->getCell('B25')->getValue())->toBe(5000000.25);
+    expect($summary?->getCell('B26')->getValue())->toBe(-5000000.25);
+    expect($summary?->getCell('B27')->getValue())->toBe(1);
+    expect($summary?->getCell('C27')->getValue())->toBe(0);
+    expect($summary?->getCell('B7')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
+
+    $amounts = $spreadsheet->getSheetByName('予実管理');
 
     expect($amounts?->rangeToArray('A1:H1')[0])->toBe([
         'Period',
@@ -143,7 +169,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($amounts?->getColumnDimension('A')->getWidth())->toBe(12.0);
     expect($amounts?->getColumnDimension('H')->getWidth())->toBe(40.0);
 
-    $fixedAssets = $spreadsheet->getSheetByName('FixedAssets');
+    $fixedAssets = $spreadsheet->getSheetByName('固定資産管理台帳');
 
     expect($fixedAssets?->rangeToArray('A1:P1')[0])->toBe([
         'AssetCode',
@@ -187,7 +213,7 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($fixedAssets?->getColumnDimension('A')->getWidth())->toBe(18.0);
     expect($fixedAssets?->getColumnDimension('P')->getWidth())->toBe(40.0);
 
-    $journalEntries = $spreadsheet->getSheetByName('JournalEntries');
+    $journalEntries = $spreadsheet->getSheetByName('仕訳帳');
 
     expect($journalEntries?->rangeToArray('A1:L1')[0])->toBe([
         'JournalEntryId',
@@ -275,8 +301,14 @@ test('current organization data can be downloaded as an Excel workbook', functio
 
 test('organizations without records export all sheets with headings', function () {
     $organization = Organization::factory()->create();
+    $this->travelTo(Carbon::create(2026, 9, 4, 13, 59, 0, 'Asia/Tokyo'));
     $contents = Excel::raw(
-        new AccountaWorkbookExport($organization->id, true),
+        new AccountaWorkbookExport(
+            $organization->id,
+            true,
+            app(FiscalYearService::class),
+            app(ProfitAndLossSummaryService::class),
+        ),
         ExcelWriter::XLSX,
     );
     $temporaryFile = tempnam(sys_get_temp_dir(), 'accounta-export-');
@@ -286,22 +318,26 @@ test('organizations without records export all sheets with headings', function (
         $spreadsheet = IOFactory::load($temporaryFile);
 
         expect($spreadsheet->getSheetNames())->toBe([
-            '予算・実績',
-            'FixedAssets',
-            'JournalEntries',
+            'まとめ',
+            '仕訳帳',
+            '固定資産管理台帳',
+            '予実管理',
             '部門マスタ',
             '予実管理科目マスタ',
             '会社・組織情報',
         ]);
-        expect($spreadsheet->getSheetByName('予算・実績')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('FixedAssets')?->getHighestDataRow())->toBe(1);
-        expect($spreadsheet->getSheetByName('JournalEntries')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('まとめ')?->getHighestDataRow())->toBe(27);
+        expect($spreadsheet->getSheetByName('まとめ')?->getCell('B7')->getValue())->toBe(0.0);
+        expect($spreadsheet->getSheetByName('仕訳帳')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('固定資産管理台帳')?->getHighestDataRow())->toBe(1);
+        expect($spreadsheet->getSheetByName('予実管理')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('部門マスタ')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('予実管理科目マスタ')?->getHighestDataRow())->toBe(1);
         expect($spreadsheet->getSheetByName('会社・組織情報')?->getHighestDataRow())->toBe(2);
 
         $spreadsheet->disconnectWorksheets();
     } finally {
+        $this->travelBack();
         unlink($temporaryFile);
     }
 });
@@ -317,9 +353,10 @@ test('non-admin workbooks omit company and organization information', function (
     $spreadsheet = IOFactory::load($response->baseResponse->getFile()->getPathname());
 
     expect($spreadsheet->getSheetNames())->toBe([
-        '予算・実績',
-        'FixedAssets',
-        'JournalEntries',
+        'まとめ',
+        '仕訳帳',
+        '固定資産管理台帳',
+        '予実管理',
         '部門マスタ',
         '予実管理科目マスタ',
     ]);

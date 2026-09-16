@@ -87,7 +87,7 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
 
     public function title(): string
     {
-        return '予算・実績';
+        return '予実管理';
     }
 
     /**

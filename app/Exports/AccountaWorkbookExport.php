@@ -2,6 +2,8 @@
 
 namespace App\Exports;
 
+use App\Services\FiscalYearService;
+use App\Services\ProfitAndLossSummaryService;
 use Maatwebsite\Excel\Concerns\Export;
 use Maatwebsite\Excel\Concerns\WithMultipleSheets;
 
@@ -9,7 +11,9 @@ class AccountaWorkbookExport implements Export, WithMultipleSheets
 {
     public function __construct(
         private readonly int $organizationId,
-        private readonly bool $includeOrganizationSheet,
+        private readonly bool $includeOrganizationDetails,
+        private readonly FiscalYearService $fiscalYearService,
+        private readonly ProfitAndLossSummaryService $profitAndLossSummaryService,
     ) {}
 
     /**
@@ -18,14 +22,19 @@ class AccountaWorkbookExport implements Export, WithMultipleSheets
     public function sheets(): array
     {
         $sheets = [
-            new AmountsSheetExport($this->organizationId),
-            new FixedAssetsSheetExport($this->organizationId),
+            new SummarySheetExport(
+                $this->organizationId,
+                $this->fiscalYearService,
+                $this->profitAndLossSummaryService,
+            ),
             new JournalEntriesSheetExport($this->organizationId),
+            new FixedAssetsSheetExport($this->organizationId),
+            new AmountsSheetExport($this->organizationId),
             new DepartmentsSheetExport($this->organizationId),
             new ManagementAccountsSheetExport($this->organizationId),
         ];
 
-        if ($this->includeOrganizationSheet) {
+        if ($this->includeOrganizationDetails) {
             $sheets[] = new OrganizationSheetExport($this->organizationId);
         }
 

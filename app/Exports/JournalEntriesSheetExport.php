@@ -82,7 +82,7 @@ class JournalEntriesSheetExport extends DefaultValueBinder implements FromQuery,
 
     public function title(): string
     {
-        return 'JournalEntries';
+        return '仕訳帳';
     }
 
     /** @return array<string, float|int> */
