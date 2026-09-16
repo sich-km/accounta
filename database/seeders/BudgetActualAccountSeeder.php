@@ -2,11 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\ManagementAccount;
+use App\Models\BudgetActualAccount;
 use App\Models\Organization;
 use Illuminate\Database\Seeder;
 
-class ManagementAccountSeeder extends Seeder
+class BudgetActualAccountSeeder extends Seeder
 {
     /**
      * @var list<string>
@@ -105,10 +105,10 @@ class ManagementAccountSeeder extends Seeder
             ->select('id')
             ->eachById(function (Organization $organization): void {
                 $now = now();
-                $managementAccounts = array_map(
-                    fn (array $managementAccount): array => [
+                $budgetActualAccounts = array_map(
+                    fn (array $budgetActualAccount): array => [
                         'organization_id' => $organization->id,
-                        ...$managementAccount,
+                        ...$budgetActualAccount,
                         'is_active' => true,
                         'created_at' => $now,
                         'updated_at' => $now,
@@ -116,8 +116,8 @@ class ManagementAccountSeeder extends Seeder
                     self::ACCOUNTS
                 );
 
-                ManagementAccount::query()->upsert(
-                    $managementAccounts,
+                BudgetActualAccount::query()->upsert(
+                    $budgetActualAccounts,
                     ['organization_id', 'code'],
                     ['name', 'account_type', 'is_active', 'updated_at']
                 );
@@ -128,13 +128,13 @@ class ManagementAccountSeeder extends Seeder
 
     private function removeObsoleteAccounts(Organization $organization): void
     {
-        $obsoleteAccounts = ManagementAccount::query()
+        $obsoleteAccounts = BudgetActualAccount::query()
             ->forOrganization($organization->id)
             ->whereIn('code', self::OBSOLETE_ACCOUNT_CODES)
             ->get();
 
         foreach ($obsoleteAccounts as $obsoleteAccount) {
-            if ($obsoleteAccount->monthlyAmounts()->exists()) {
+            if ($obsoleteAccount->budgetActualEntries()->exists()) {
                 $obsoleteAccount->update(['is_active' => false]);
 
                 continue;

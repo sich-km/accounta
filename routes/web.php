@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AccountingStudyController;
+use App\Http\Controllers\BudgetActualAccountController;
+use App\Http\Controllers\BudgetActualEntryController;
 use App\Http\Controllers\CompanyController;
 use App\Http\Controllers\DepartmentController;
 use App\Http\Controllers\ExcelExportController;
@@ -8,9 +10,7 @@ use App\Http\Controllers\FixedAssetController;
 use App\Http\Controllers\JournalDocumentController;
 use App\Http\Controllers\JournalEntryController;
 use App\Http\Controllers\LedgerAccountController;
-use App\Http\Controllers\ManagementAccountController;
 use App\Http\Controllers\ManagementController;
-use App\Http\Controllers\MonthlyAmountController;
 use App\Models\FixedAsset;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -34,7 +34,7 @@ Route::middleware([
 
         $organization->loadCount([
             'departments as active_departments_count' => fn (Builder $query): Builder => $query->where('is_active', true),
-            'managementAccounts as active_management_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+            'budgetActualAccounts as active_budget_actual_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
             'ledgerAccounts as active_ledger_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
         ]);
 
@@ -71,10 +71,10 @@ Route::middleware([
     Route::patch('departments/{department}/status', [DepartmentController::class, 'toggleStatus'])
         ->name('departments.status');
 
-    Route::resource('management-accounts', ManagementAccountController::class)
+    Route::resource('budget-actual-accounts', BudgetActualAccountController::class)
         ->except(['show', 'destroy']);
-    Route::patch('management-accounts/{management_account}/status', [ManagementAccountController::class, 'toggleStatus'])
-        ->name('management-accounts.status');
+    Route::patch('budget-actual-accounts/{budget_actual_account}/status', [BudgetActualAccountController::class, 'toggleStatus'])
+        ->name('budget-actual-accounts.status');
 
     Route::resource('ledger-accounts', LedgerAccountController::class)
         ->except(['show', 'destroy']);
@@ -89,7 +89,7 @@ Route::middleware([
     Route::delete('journal-entries/{journal_entry}/documents/{journal_document}', [JournalDocumentController::class, 'destroy'])
         ->name('journal-entries.documents.destroy');
 
-    Route::resource('amounts', MonthlyAmountController::class)
+    Route::resource('budget-actual-entries', BudgetActualEntryController::class)
         ->except('show');
 
     Route::get('/accounting-study', AccountingStudyController::class)

@@ -2,8 +2,8 @@
 
 namespace App\Exports;
 
+use App\Models\BudgetActualEntry;
 use App\Models\JournalEntryLine;
-use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Services\FiscalYearService;
 use App\Services\ProfitAndLossSummaryService;
@@ -168,17 +168,17 @@ class SummarySheetExport implements FromArray, WithColumnFormatting, WithColumnW
      */
     private function budgetActualSummary(string $periodStart, string $periodEnd): array
     {
-        $totals = MonthlyAmount::query()
+        $totals = BudgetActualEntry::query()
             ->forOrganization($this->organizationId)
-            ->whereBetween('monthly_amounts.period', [$periodStart, $periodEnd])
-            ->join('management_accounts', 'management_accounts.id', '=', 'monthly_amounts.management_account_id')
+            ->whereBetween('budget_actual_entries.period', [$periodStart, $periodEnd])
+            ->join('budget_actual_accounts', 'budget_actual_accounts.id', '=', 'budget_actual_entries.budget_actual_account_id')
             ->toBase()
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_revenue")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_expenses")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_revenue")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_expenses")
-            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'budget' THEN 1 ELSE 0 END) AS budget_records")
-            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'actual' THEN 1 ELSE 0 END) AS actual_records")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'budget' AND budget_actual_accounts.account_type = 'revenue' THEN budget_actual_entries.amount ELSE 0 END), 0) AS budget_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'budget' AND budget_actual_accounts.account_type = 'expense' THEN budget_actual_entries.amount ELSE 0 END), 0) AS budget_expenses")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'actual' AND budget_actual_accounts.account_type = 'revenue' THEN budget_actual_entries.amount ELSE 0 END), 0) AS actual_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'actual' AND budget_actual_accounts.account_type = 'expense' THEN budget_actual_entries.amount ELSE 0 END), 0) AS actual_expenses")
+            ->selectRaw("SUM(CASE WHEN budget_actual_entries.type = 'budget' THEN 1 ELSE 0 END) AS budget_records")
+            ->selectRaw("SUM(CASE WHEN budget_actual_entries.type = 'actual' THEN 1 ELSE 0 END) AS actual_records")
             ->first();
 
         $budgetRevenue = (float) $totals->budget_revenue;

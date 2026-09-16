@@ -17,7 +17,7 @@
                     @endforeach
                 </select>
             </div>
-            <x-button href="{{ route('amounts.index') }}" class="text-sm">予実管理を表示</x-button>
+            <x-button href="{{ route('budget-actual-entries.index') }}" class="text-sm">予実管理を表示</x-button>
         </div>
     </div>
 
@@ -25,7 +25,7 @@
 
     <div wire:loading.class="opacity-60" wire:target="fiscalYear" class="transition-opacity">
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <a href="{{ route('amounts.index', ['type' => 'budget']) }}" class="rounded-xl border border-sky-200 bg-white p-5 shadow-sm transition hover:border-sky-300 hover:shadow-md">
+            <a href="{{ route('budget-actual-entries.index', ['type' => 'budget']) }}" class="rounded-xl border border-sky-200 bg-white p-5 shadow-sm transition hover:border-sky-300 hover:shadow-md">
                 <p class="text-sm font-semibold text-gray-700">選択年度の予算レコード</p>
                 <p class="mt-3 flex items-baseline gap-2">
                     <span class="text-3xl font-semibold tabular-nums text-sky-700">{{ number_format($budgetActualSummary['budget']['records']) }}</span>
@@ -33,7 +33,7 @@
                 </p>
             </a>
 
-            <a href="{{ route('amounts.index', ['type' => 'actual']) }}" class="rounded-xl border border-cyan-200 bg-white p-5 shadow-sm transition hover:border-cyan-300 hover:shadow-md">
+            <a href="{{ route('budget-actual-entries.index', ['type' => 'actual']) }}" class="rounded-xl border border-cyan-200 bg-white p-5 shadow-sm transition hover:border-cyan-300 hover:shadow-md">
                 <p class="text-sm font-semibold text-gray-700">選択年度の実績レコード</p>
                 <p class="mt-3 flex items-baseline gap-2">
                     <span class="text-3xl font-semibold tabular-nums text-cyan-700">{{ number_format($budgetActualSummary['actual']['records']) }}</span>

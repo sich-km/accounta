@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreMonthlyAmountRequest;
-use App\Http\Requests\UpdateMonthlyAmountRequest;
+use App\Http\Requests\StoreBudgetActualEntryRequest;
+use App\Http\Requests\UpdateBudgetActualEntryRequest;
+use App\Models\BudgetActualAccount;
+use App\Models\BudgetActualEntry;
 use App\Models\Department;
-use App\Models\ManagementAccount;
-use App\Models\MonthlyAmount;
 use App\Services\FiscalYearService;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Collection;
@@ -15,19 +15,19 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
-class MonthlyAmountController extends Controller
+class BudgetActualEntryController extends Controller
 {
     /** @var list<int> */
     private const array PER_PAGE_OPTIONS = [50, 100, 150, 200];
 
-    private const string PREFERENCES_CACHE_PREFIX = 'monthly-amounts:index-preferences:user:';
+    private const string PREFERENCES_CACHE_PREFIX = 'budget-actual-entries:index-preferences:user:';
 
     public function index(Request $request, FiscalYearService $fiscalYearService): View
     {
         $organizationId = $request->user()->organization_id;
         $fiscalYearStartMonth = (int) $request->user()->company()->value('fiscal_year_start_month');
         $currentFiscalYear = $fiscalYearService->current($fiscalYearStartMonth);
-        $availablePeriods = MonthlyAmount::query()
+        $availablePeriods = BudgetActualEntry::query()
             ->forOrganization($organizationId)
             ->select('period')
             ->distinct()
@@ -41,19 +41,19 @@ class MonthlyAmountController extends Controller
             ->forOrganization($organizationId)
             ->orderBy('code')
             ->get(['id', 'code', 'name']);
-        $managementAccounts = ManagementAccount::query()
+        $budgetActualAccounts = BudgetActualAccount::query()
             ->forOrganization($organizationId)
             ->orderBy('code')
             ->get(['id', 'code', 'name']);
 
         $preferencesCacheKey = self::PREFERENCES_CACHE_PREFIX.$request->user()->getAuthIdentifier();
-        $preferenceKeys = ['type', 'year', 'month', 'department_id', 'management_account_id', 'per_page'];
+        $preferenceKeys = ['type', 'year', 'month', 'department_id', 'budget_actual_account_id', 'per_page'];
         $defaultPreferences = [
             'type' => null,
             'year' => $currentFiscalYear,
             'month' => null,
             'department_id' => null,
-            'management_account_id' => null,
+            'budget_actual_account_id' => null,
             'per_page' => self::PER_PAGE_OPTIONS[0],
         ];
 
@@ -86,9 +86,9 @@ class MonthlyAmountController extends Controller
             $requestedPreferences['department_id'],
             $departments->pluck('id')->all(),
         );
-        $selectedManagementAccountId = $this->selectedMasterId(
-            $requestedPreferences['management_account_id'],
-            $managementAccounts->pluck('id')->all(),
+        $selectedBudgetActualAccountId = $this->selectedMasterId(
+            $requestedPreferences['budget_actual_account_id'],
+            $budgetActualAccounts->pluck('id')->all(),
         );
         $selectedPerPage = $this->selectedPerPage($requestedPreferences['per_page']);
 
@@ -97,7 +97,7 @@ class MonthlyAmountController extends Controller
             'year' => $selectedYear,
             'month' => $selectedMonth,
             'department_id' => $selectedDepartmentId,
-            'management_account_id' => $selectedManagementAccountId,
+            'budget_actual_account_id' => $selectedBudgetActualAccountId,
             'per_page' => $selectedPerPage,
         ];
 
@@ -113,21 +113,21 @@ class MonthlyAmountController extends Controller
                 $selectedMonth,
             );
 
-        $amounts = MonthlyAmount::query()
+        $budgetActualEntries = BudgetActualEntry::query()
             ->forOrganization($organizationId)
             ->when($selectedType !== null, fn ($query) => $query->where('type', $selectedType))
             ->when($selectedDepartmentId !== null, fn ($query) => $query->where('department_id', $selectedDepartmentId))
-            ->when($selectedManagementAccountId !== null, fn ($query) => $query->where('management_account_id', $selectedManagementAccountId))
+            ->when($selectedBudgetActualAccountId !== null, fn ($query) => $query->where('budget_actual_account_id', $selectedBudgetActualAccountId))
             ->when($dateRange !== null, fn ($query) => $query->whereBetween('period', $dateRange))
-            ->with(['department', 'managementAccount'])
+            ->with(['department', 'budgetActualAccount'])
             ->orderByDesc('period')
             ->orderByDesc('id')
             ->paginate($selectedPerPage)
             ->withQueryString();
 
-        return view('amounts.index', [
-            'amounts' => $amounts,
-            'amountTypes' => MonthlyAmount::TYPES,
+        return view('budget-actual-entries.index', [
+            'budgetActualEntries' => $budgetActualEntries,
+            'entryTypes' => BudgetActualEntry::TYPES,
             'availableYears' => $availableYears,
             'currentFiscalYear' => $currentFiscalYear,
             'fiscalYearMonths' => array_merge(
@@ -135,110 +135,110 @@ class MonthlyAmountController extends Controller
                 $fiscalYearStartMonth === 1 ? [] : range(1, $fiscalYearStartMonth - 1),
             ),
             'departments' => $departments,
-            'managementAccounts' => $managementAccounts,
+            'budgetActualAccounts' => $budgetActualAccounts,
             'perPageOptions' => self::PER_PAGE_OPTIONS,
             'selectedType' => $selectedType,
             'selectedYear' => $selectedYear,
             'selectedMonth' => $selectedMonth,
             'selectedDepartmentId' => $selectedDepartmentId,
-            'selectedManagementAccountId' => $selectedManagementAccountId,
+            'selectedBudgetActualAccountId' => $selectedBudgetActualAccountId,
             'selectedPerPage' => $selectedPerPage,
         ]);
     }
 
     public function create(Request $request): View
     {
-        return view('amounts.create', [
+        return view('budget-actual-entries.create', [
             ...$this->masterData($request),
-            'amountTypes' => MonthlyAmount::TYPES,
+            'entryTypes' => BudgetActualEntry::TYPES,
         ]);
     }
 
-    public function store(StoreMonthlyAmountRequest $request): RedirectResponse
+    public function store(StoreBudgetActualEntryRequest $request): RedirectResponse
     {
         $validated = $request->validated();
         $validated['period'] = CarbonImmutable::createFromFormat('!Y-m-d', $validated['period'].'-01');
 
         $request->user()
             ->organization
-            ->monthlyAmounts()
+            ->budgetActualEntries()
             ->create($validated);
 
         return redirect()
-            ->route('amounts.index')
+            ->route('budget-actual-entries.index')
             ->with('status', '予算・実績明細を登録しました。');
     }
 
-    public function edit(Request $request, int $amount): View
+    public function edit(Request $request, int $budgetActualEntry): View
     {
-        $amount = $this->ownedAmount($request, $amount);
+        $budgetActualEntry = $this->ownedBudgetActualEntry($request, $budgetActualEntry);
 
-        return view('amounts.edit', [
-            'amount' => $amount,
-            ...$this->masterData($request, $amount),
-            'amountTypes' => MonthlyAmount::TYPES,
+        return view('budget-actual-entries.edit', [
+            'budgetActualEntry' => $budgetActualEntry,
+            ...$this->masterData($request, $budgetActualEntry),
+            'entryTypes' => BudgetActualEntry::TYPES,
         ]);
     }
 
-    public function update(UpdateMonthlyAmountRequest $request, int $amount): RedirectResponse
+    public function update(UpdateBudgetActualEntryRequest $request, int $budgetActualEntry): RedirectResponse
     {
-        $amount = $this->ownedAmount($request, $amount);
+        $budgetActualEntry = $this->ownedBudgetActualEntry($request, $budgetActualEntry);
         $validated = $request->validated();
         $validated['period'] = CarbonImmutable::createFromFormat('!Y-m-d', $validated['period'].'-01');
-        $amount->update($validated);
+        $budgetActualEntry->update($validated);
 
         return redirect()
-            ->route('amounts.index')
+            ->route('budget-actual-entries.index')
             ->with('status', '予算・実績明細を更新しました。');
     }
 
-    public function destroy(Request $request, int $amount): RedirectResponse
+    public function destroy(Request $request, int $budgetActualEntry): RedirectResponse
     {
-        $this->ownedAmount($request, $amount)->delete();
+        $this->ownedBudgetActualEntry($request, $budgetActualEntry)->delete();
 
         return redirect()
-            ->route('amounts.index')
+            ->route('budget-actual-entries.index')
             ->with('status', '予算・実績明細を削除しました。');
     }
 
     /**
-     * @return array{departments: Collection<int, Department>, managementAccounts: Collection<int, ManagementAccount>}
+     * @return array{departments: Collection<int, Department>, budgetActualAccounts: Collection<int, BudgetActualAccount>}
      */
-    private function masterData(Request $request, ?MonthlyAmount $amount = null): array
+    private function masterData(Request $request, ?BudgetActualEntry $budgetActualEntry = null): array
     {
         $organizationId = $request->user()->organization_id;
 
         $departments = Department::query()
             ->forOrganization($organizationId)
-            ->where(function ($query) use ($amount): void {
+            ->where(function ($query) use ($budgetActualEntry): void {
                 $query->where('is_active', true)
-                    ->when($amount, fn ($activeQuery) => $activeQuery->orWhere('id', $amount->department_id));
+                    ->when($budgetActualEntry, fn ($activeQuery) => $activeQuery->orWhere('id', $budgetActualEntry->department_id));
             })
             ->orderBy('code')
             ->get();
 
-        $managementAccounts = ManagementAccount::query()
+        $budgetActualAccounts = BudgetActualAccount::query()
             ->forOrganization($organizationId)
-            ->where(function ($query) use ($amount): void {
+            ->where(function ($query) use ($budgetActualEntry): void {
                 $query->where('is_active', true)
-                    ->when($amount, fn ($activeQuery) => $activeQuery->orWhere('id', $amount->management_account_id));
+                    ->when($budgetActualEntry, fn ($activeQuery) => $activeQuery->orWhere('id', $budgetActualEntry->budget_actual_account_id));
             })
             ->orderBy('code')
             ->get();
 
-        return compact('departments', 'managementAccounts');
+        return compact('departments', 'budgetActualAccounts');
     }
 
-    private function ownedAmount(Request $request, int $amountId): MonthlyAmount
+    private function ownedBudgetActualEntry(Request $request, int $budgetActualEntryId): BudgetActualEntry
     {
-        return MonthlyAmount::query()
+        return BudgetActualEntry::query()
             ->forOrganization($request->user()->organization_id)
-            ->findOrFail($amountId);
+            ->findOrFail($budgetActualEntryId);
     }
 
     private function selectedType(mixed $type): ?string
     {
-        return is_string($type) && array_key_exists($type, MonthlyAmount::TYPES)
+        return is_string($type) && array_key_exists($type, BudgetActualEntry::TYPES)
             ? $type
             : null;
     }

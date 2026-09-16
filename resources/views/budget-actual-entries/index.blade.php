@@ -2,7 +2,7 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <h2 class="text-xl font-semibold leading-tight text-gray-800">予算・実績</h2>
-            <x-button href="{{ route('amounts.create') }}" class="text-sm">新規登録</x-button>
+            <x-button href="{{ route('budget-actual-entries.create') }}" class="text-sm">新規登録</x-button>
         </div>
     </x-slot>
 
@@ -17,7 +17,7 @@
             <div class="bg-white p-3 shadow-sm sm:rounded-lg">
                 <form
                     method="GET"
-                    action="{{ route('amounts.index') }}"
+                    action="{{ route('budget-actual-entries.index') }}"
                     class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
                     x-data="{
                         selectedYear: {{ Js::from($selectedYear === null ? '' : (string) $selectedYear) }},
@@ -32,7 +32,7 @@
                             class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32"
                         >
                             <option value="">すべて</option>
-                            @foreach ($amountTypes as $type => $typeLabel)
+                            @foreach ($entryTypes as $type => $typeLabel)
                                 <option value="{{ $type }}" @selected($selectedType === $type)>{{ $typeLabel }}</option>
                             @endforeach
                         </select>
@@ -87,16 +87,16 @@
                     </div>
 
                     <div>
-                        <x-label for="management_account_id" value="予実管理科目" class="font-semibold text-gray-800" />
+                        <x-label for="budget_actual_account_id" value="予実管理科目" class="font-semibold text-gray-800" />
                         <select
-                            id="management_account_id"
-                            name="management_account_id"
+                            id="budget_actual_account_id"
+                            name="budget_actual_account_id"
                             class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-64"
                         >
                             <option value="">すべて</option>
-                            @foreach ($managementAccounts as $managementAccount)
-                                <option value="{{ $managementAccount->id }}" @selected($selectedManagementAccountId === $managementAccount->id)>
-                                    {{ $managementAccount->code }} {{ $managementAccount->name }}
+                            @foreach ($budgetActualAccounts as $budgetActualAccount)
+                                <option value="{{ $budgetActualAccount->id }}" @selected($selectedBudgetActualAccountId === $budgetActualAccount->id)>
+                                    {{ $budgetActualAccount->code }} {{ $budgetActualAccount->name }}
                                 </option>
                             @endforeach
                         </select>
@@ -120,8 +120,8 @@
                     <div class="flex items-center gap-2">
                         <x-button type="submit" class="text-sm">表示</x-button>
 
-                        @if ($selectedType !== null || $selectedYear !== $currentFiscalYear || $selectedMonth !== null || $selectedDepartmentId !== null || $selectedManagementAccountId !== null || $selectedPerPage !== $perPageOptions[0])
-                            <a href="{{ route('amounts.index', ['reset_filters' => 1]) }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
+                        @if ($selectedType !== null || $selectedYear !== $currentFiscalYear || $selectedMonth !== null || $selectedDepartmentId !== null || $selectedBudgetActualAccountId !== null || $selectedPerPage !== $perPageOptions[0])
+                            <a href="{{ route('budget-actual-entries.index', ['reset_filters' => 1]) }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
                                 クリア
                             </a>
                         @endif
@@ -129,7 +129,7 @@
                 </form>
             </div>
 
-            <x-list-result-count :count="$amounts->total()" label="予算・実績の該当件数" />
+            <x-list-result-count :count="$budgetActualEntries->total()" label="予算・実績の該当件数" />
 
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">
@@ -146,18 +146,18 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
-                            @forelse ($amounts as $amount)
+                            @forelse ($budgetActualEntries as $budgetActualEntry)
                                 <tr>
-                                    <td class="whitespace-nowrap px-4 py-4 text-base font-medium text-gray-900">{{ $amount->period->format('Y/m') }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base font-medium text-gray-900">{{ $budgetActualEntry->period->format('Y/m') }}</td>
                                     <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">
-                                        {{ $amount->department->code }} {{ $amount->department->name }}
+                                        {{ $budgetActualEntry->department->code }} {{ $budgetActualEntry->department->name }}
                                     </td>
                                     <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">
-                                        {{ $amount->managementAccount->code }} {{ $amount->managementAccount->name }}
+                                        {{ $budgetActualEntry->budgetActualAccount->code }} {{ $budgetActualEntry->budgetActualAccount->name }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ \App\Models\MonthlyAmount::TYPES[$amount->type] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $amount->amount, 2) }}</td>
-                                    <td class="max-w-xs truncate px-4 py-4 text-base text-gray-900" title="{{ $amount->memo }}">{{ $amount->memo }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ \App\Models\BudgetActualEntry::TYPES[$budgetActualEntry->type] }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $budgetActualEntry->amount, 2) }}</td>
+                                    <td class="max-w-xs truncate px-4 py-4 text-base text-gray-900" title="{{ $budgetActualEntry->memo }}">{{ $budgetActualEntry->memo }}</td>
                                     <td class="w-20 whitespace-nowrap px-4 py-4 text-right text-base">
                                         <div class="flex justify-end">
                                             <x-dropdown align="right" width="48" :teleport="true">
@@ -173,7 +173,7 @@
 
                                                 <x-slot name="content">
                                                     <div role="menu">
-                                                        <x-dropdown-link href="{{ route('amounts.edit', $amount) }}" role="menuitem">
+                                                        <x-dropdown-link href="{{ route('budget-actual-entries.edit', $budgetActualEntry) }}" role="menuitem">
                                                             <span class="flex items-center gap-2">
                                                                 <svg class="size-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
                                                                     <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.862 4.487Z" />
@@ -182,7 +182,7 @@
                                                                 <span>編集</span>
                                                             </span>
                                                         </x-dropdown-link>
-                                                        <form method="POST" action="{{ route('amounts.destroy', $amount) }}" onsubmit="return confirm('この明細を削除しますか？')">
+                                                        <form method="POST" action="{{ route('budget-actual-entries.destroy', $budgetActualEntry) }}" onsubmit="return confirm('この明細を削除しますか？')">
                                                             @csrf
                                                             @method('DELETE')
                                                             <x-dropdown-button type="submit" role="menuitem">
@@ -210,7 +210,7 @@
                 </div>
             </div>
 
-            {{ $amounts->links() }}
+            {{ $budgetActualEntries->links() }}
         </div>
     </div>
 </x-app-layout>

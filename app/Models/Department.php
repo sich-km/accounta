@@ -37,9 +37,9 @@ class Department extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function monthlyAmounts(): HasMany
+    public function budgetActualEntries(): HasMany
     {
-        return $this->hasMany(MonthlyAmount::class);
+        return $this->hasMany(BudgetActualEntry::class);
     }
 
     public function fixedAssets(): HasMany

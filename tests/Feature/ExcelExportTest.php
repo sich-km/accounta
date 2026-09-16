@@ -2,14 +2,14 @@
 
 use App\Enums\UserType;
 use App\Exports\AccountaWorkbookExport;
+use App\Models\BudgetActualAccount;
+use App\Models\BudgetActualEntry;
 use App\Models\Department;
 use App\Models\FixedAsset;
 use App\Models\JournalDocument;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
 use App\Models\LedgerAccount;
-use App\Models\ManagementAccount;
-use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\FiscalYearService;
@@ -39,25 +39,25 @@ test('current organization data can be downloaded as an Excel workbook', functio
         'code' => 'D001',
         'name' => '無効部門',
     ]);
-    $managementAccount = ManagementAccount::factory()->for($organization)->create([
+    $budgetActualAccount = BudgetActualAccount::factory()->for($organization)->create([
         'code' => 'A002',
         'name' => '+AccountName',
         'account_type' => 'expense',
     ]);
-    ManagementAccount::factory()->for($organization)->inactive()->create([
+    BudgetActualAccount::factory()->for($organization)->inactive()->create([
         'code' => 'A001',
         'name' => '無効科目',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2026-04-01',
         'type' => 'budget',
         'amount' => '5000000.25',
         'memo' => '=SUM(1,1)',
     ]);
-    MonthlyAmount::factory()->create();
+    BudgetActualEntry::factory()->create();
     FixedAsset::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
@@ -143,31 +143,31 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($summary?->getCell('C27')->getValue())->toBe(0);
     expect($summary?->getCell('B7')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
 
-    $amounts = $spreadsheet->getSheetByName('予実管理');
+    $budgetActualEntriesSheet = $spreadsheet->getSheetByName('予実管理');
 
-    expect($amounts?->rangeToArray('A1:H1')[0])->toBe([
+    expect($budgetActualEntriesSheet?->rangeToArray('A1:H1')[0])->toBe([
         'Period',
         'Year',
         'Month',
         'DepartmentCode',
-        'ManagementAccountCode',
+        'BudgetActualAccountCode',
         'Type',
         'Amount',
         'Memo',
     ]);
-    expect($amounts?->getHighestDataRow())->toBe(2);
-    expect($amounts?->getCell('A2')->getFormattedValue())->toBe('2026-04');
-    expect($amounts?->getCell('B2')->getValue())->toBe(2026);
-    expect($amounts?->getCell('C2')->getValue())->toBe(4);
-    expect($amounts?->getCell('D2')->getValue())->toBe('D002');
-    expect($amounts?->getCell('E2')->getValue())->toBe('A002');
-    expect($amounts?->getCell('F2')->getValue())->toBe('budget');
-    expect($amounts?->getCell('G2')->getValue())->toBe(5000000.25);
-    expect($amounts?->getCell('G2')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
-    expect($amounts?->getCell('H2')->getValue())->toBe('=SUM(1,1)');
-    expect($amounts?->getCell('H2')->getDataType())->toBe(DataType::TYPE_STRING);
-    expect($amounts?->getColumnDimension('A')->getWidth())->toBe(12.0);
-    expect($amounts?->getColumnDimension('H')->getWidth())->toBe(40.0);
+    expect($budgetActualEntriesSheet?->getHighestDataRow())->toBe(2);
+    expect($budgetActualEntriesSheet?->getCell('A2')->getFormattedValue())->toBe('2026-04');
+    expect($budgetActualEntriesSheet?->getCell('B2')->getValue())->toBe(2026);
+    expect($budgetActualEntriesSheet?->getCell('C2')->getValue())->toBe(4);
+    expect($budgetActualEntriesSheet?->getCell('D2')->getValue())->toBe('D002');
+    expect($budgetActualEntriesSheet?->getCell('E2')->getValue())->toBe('A002');
+    expect($budgetActualEntriesSheet?->getCell('F2')->getValue())->toBe('budget');
+    expect($budgetActualEntriesSheet?->getCell('G2')->getValue())->toBe(5000000.25);
+    expect($budgetActualEntriesSheet?->getCell('G2')->getStyle()->getNumberFormat()->getFormatCode())->toBe('#,##0.00');
+    expect($budgetActualEntriesSheet?->getCell('H2')->getValue())->toBe('=SUM(1,1)');
+    expect($budgetActualEntriesSheet?->getCell('H2')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($budgetActualEntriesSheet?->getColumnDimension('A')->getWidth())->toBe(12.0);
+    expect($budgetActualEntriesSheet?->getColumnDimension('H')->getWidth())->toBe(40.0);
 
     $fixedAssets = $spreadsheet->getSheetByName('固定資産管理台帳');
 
@@ -259,22 +259,22 @@ test('current organization data can be downloaded as an Excel workbook', functio
     expect($departments?->getColumnDimension('A')->getWidth())->toBe(18.0);
     expect($departments?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
-    $managementAccounts = $spreadsheet->getSheetByName('予実管理科目マスタ');
+    $budgetActualAccounts = $spreadsheet->getSheetByName('予実管理科目マスタ');
 
-    expect($managementAccounts?->rangeToArray('A1:D1')[0])->toBe([
-        'ManagementAccountCode',
-        'ManagementAccountName',
+    expect($budgetActualAccounts?->rangeToArray('A1:D1')[0])->toBe([
+        'BudgetActualAccountCode',
+        'BudgetActualAccountName',
         'AccountType',
         'IsActive',
     ]);
-    expect($managementAccounts?->getHighestDataRow())->toBe(3);
-    expect($managementAccounts?->getCell('A2')->getValue())->toBe('A001');
-    expect($managementAccounts?->getCell('A3')->getValue())->toBe('A002');
-    expect($managementAccounts?->getCell('B3')->getValue())->toBe('+AccountName');
-    expect($managementAccounts?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
-    expect($managementAccounts?->getCell('D3')->getDataType())->toBe(DataType::TYPE_BOOL);
-    expect($managementAccounts?->getColumnDimension('A')->getWidth())->toBe(18.0);
-    expect($managementAccounts?->getColumnDimension('B')->getWidth())->toBe(32.0);
+    expect($budgetActualAccounts?->getHighestDataRow())->toBe(3);
+    expect($budgetActualAccounts?->getCell('A2')->getValue())->toBe('A001');
+    expect($budgetActualAccounts?->getCell('A3')->getValue())->toBe('A002');
+    expect($budgetActualAccounts?->getCell('B3')->getValue())->toBe('+AccountName');
+    expect($budgetActualAccounts?->getCell('B3')->getDataType())->toBe(DataType::TYPE_STRING);
+    expect($budgetActualAccounts?->getCell('D3')->getDataType())->toBe(DataType::TYPE_BOOL);
+    expect($budgetActualAccounts?->getColumnDimension('A')->getWidth())->toBe(18.0);
+    expect($budgetActualAccounts?->getColumnDimension('B')->getWidth())->toBe(32.0);
 
     $organizationSheet = $spreadsheet->getSheetByName('会社・組織情報');
 

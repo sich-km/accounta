@@ -71,7 +71,7 @@
                 <div class="grid grid-cols-1 gap-4 sm:grid-cols-3">
                     @foreach ([
                         ['label' => '有効な部門', 'count' => $organization->active_departments_count, 'color' => 'text-blue-700'],
-                        ['label' => '有効な予実管理科目', 'count' => $organization->active_management_accounts_count, 'color' => 'text-indigo-700'],
+                        ['label' => '有効な予実管理科目', 'count' => $organization->active_budget_actual_accounts_count, 'color' => 'text-indigo-700'],
                         ['label' => '有効な仕訳用勘定科目', 'count' => $organization->active_ledger_accounts_count, 'color' => 'text-fuchsia-700'],
                     ] as $masterSummary)
                         <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">

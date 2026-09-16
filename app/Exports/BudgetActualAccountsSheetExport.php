@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\ManagementAccount;
+use App\Models\BudgetActualAccount;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnWidths;
@@ -15,18 +15,18 @@ use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
 /**
- * @implements WithMapping<ManagementAccount>
+ * @implements WithMapping<BudgetActualAccount>
  */
-class ManagementAccountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class BudgetActualAccountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
     /**
-     * @return Builder<ManagementAccount>
+     * @return Builder<BudgetActualAccount>
      */
     public function query(): Builder
     {
-        return ManagementAccount::query()
+        return BudgetActualAccount::query()
             ->forOrganization($this->organizationId)
             ->orderBy('code')
             ->orderBy('id');
@@ -38,8 +38,8 @@ class ManagementAccountsSheetExport extends DefaultValueBinder implements FromQu
     public function headings(): array
     {
         return [
-            'ManagementAccountCode',
-            'ManagementAccountName',
+            'BudgetActualAccountCode',
+            'BudgetActualAccountName',
             'AccountType',
             'IsActive',
         ];
@@ -50,7 +50,7 @@ class ManagementAccountsSheetExport extends DefaultValueBinder implements FromQu
      */
     public function map(mixed $row): array
     {
-        /** @var ManagementAccount $row */
+        /** @var BudgetActualAccount $row */
         return [
             $row->code,
             $row->name,

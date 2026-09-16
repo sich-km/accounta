@@ -29,9 +29,9 @@ class AccountaWorkbookExport implements Export, WithMultipleSheets
             ),
             new JournalEntriesSheetExport($this->organizationId),
             new FixedAssetsSheetExport($this->organizationId),
-            new AmountsSheetExport($this->organizationId),
+            new BudgetActualEntriesSheetExport($this->organizationId),
             new DepartmentsSheetExport($this->organizationId),
-            new ManagementAccountsSheetExport($this->organizationId),
+            new BudgetActualAccountsSheetExport($this->organizationId),
         ];
 
         if ($this->includeOrganizationDetails) {

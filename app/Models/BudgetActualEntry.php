@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
-use Database\Factories\MonthlyAmountFactory;
+use Database\Factories\BudgetActualEntryFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class MonthlyAmount extends Model
+class BudgetActualEntry extends Model
 {
-    /** @use HasFactory<MonthlyAmountFactory> */
+    /** @use HasFactory<BudgetActualEntryFactory> */
     use HasFactory;
 
     /**
@@ -26,7 +26,7 @@ class MonthlyAmount extends Model
      */
     protected $fillable = [
         'department_id',
-        'management_account_id',
+        'budget_actual_account_id',
         'period',
         'type',
         'amount',
@@ -34,8 +34,8 @@ class MonthlyAmount extends Model
     ];
 
     /**
-     * @param  Builder<MonthlyAmount>  $query
-     * @return Builder<MonthlyAmount>
+     * @param  Builder<BudgetActualEntry>  $query
+     * @return Builder<BudgetActualEntry>
      */
     public function scopeForOrganization(Builder $query, int $organizationId): Builder
     {
@@ -52,9 +52,9 @@ class MonthlyAmount extends Model
         return $this->belongsTo(Department::class);
     }
 
-    public function managementAccount(): BelongsTo
+    public function budgetActualAccount(): BelongsTo
     {
-        return $this->belongsTo(ManagementAccount::class);
+        return $this->belongsTo(BudgetActualAccount::class);
     }
 
     /**

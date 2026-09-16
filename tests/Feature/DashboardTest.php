@@ -4,13 +4,13 @@ use App\Enums\UserType;
 use App\Livewire\Dashboard\BalanceSheetSummary;
 use App\Livewire\Dashboard\BudgetActualSummary;
 use App\Livewire\Dashboard\ProfitAndLossSummary;
+use App\Models\BudgetActualAccount;
+use App\Models\BudgetActualEntry;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\FixedAsset;
 use App\Models\JournalEntry;
 use App\Models\LedgerAccount;
-use App\Models\ManagementAccount;
-use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
 use Carbon\CarbonImmutable;
@@ -23,8 +23,8 @@ test('dashboard displays statistics for the current organization', function () {
     $user = User::factory()->for($organization)->create(['name' => '非表示ユーザー']);
     $department = Department::factory()->for($organization)->create();
     Department::factory()->for($organization)->inactive()->create();
-    $managementAccount = ManagementAccount::factory()->for($organization)->create();
-    ManagementAccount::factory()->for($organization)->inactive()->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($organization)->create();
+    BudgetActualAccount::factory()->for($organization)->inactive()->create();
     LedgerAccount::factory()->for($organization)->create();
     LedgerAccount::factory()->for($organization)->inactive()->create();
     JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-04-01']);
@@ -32,42 +32,42 @@ test('dashboard displays statistics for the current organization', function () {
     JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-03-31']);
     JournalEntry::factory()->create(['entry_date' => '2026-04-01']);
 
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'type' => 'budget',
         'period' => '2026-04-01',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'type' => 'budget',
         'period' => '2027-03-01',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'type' => 'actual',
         'period' => '2026-06-01',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'type' => 'budget',
         'period' => '2026-03-01',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'type' => 'budget',
         'period' => '2027-04-01',
     ]);
-    MonthlyAmount::factory()->create(['period' => '2026-04-01']);
+    BudgetActualEntry::factory()->create(['period' => '2026-04-01']);
     FixedAsset::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
@@ -101,7 +101,7 @@ test('dashboard displays statistics for the current organization', function () {
         ->assertViewHas('organization', function (Organization $dashboardOrganization) use ($organization): bool {
             return $dashboardOrganization->is($organization)
                 && $dashboardOrganization->active_departments_count === 1
-                && $dashboardOrganization->active_management_accounts_count === 1
+                && $dashboardOrganization->active_budget_actual_accounts_count === 1
                 && $dashboardOrganization->active_ledger_accounts_count === 1;
         })
         ->assertViewHas('fixedAssetSummary', [
@@ -129,7 +129,7 @@ test('dashboard displays statistics for the current organization', function () {
         ->assertDontSeeText('固定資産管理台帳')
         ->assertDontSeeText('仕訳帳')
         ->assertDontSee('href="'.route('departments.index').'"', false)
-        ->assertDontSee('href="'.route('management-accounts.index').'"', false)
+        ->assertDontSee('href="'.route('budget-actual-accounts.index').'"', false)
         ->assertDontSee('href="'.route('ledger-accounts.index').'"', false)
         ->assertDontSeeText('管理メニュー')
         ->assertDontSeeText('ログインユーザー');
@@ -347,24 +347,24 @@ test('dashboard compares the selected fiscal year budget and actual profit or lo
     $organization = Organization::factory()->for($company)->create();
     $user = User::factory()->for($organization)->create();
     $department = Department::factory()->for($organization)->create();
-    $revenueAccount = ManagementAccount::factory()->for($organization)->create([
+    $revenueAccount = BudgetActualAccount::factory()->for($organization)->create([
         'code' => '4000',
         'name' => '売上高',
         'account_type' => 'revenue',
     ]);
-    $expenseAccount = ManagementAccount::factory()->for($organization)->create([
+    $expenseAccount = BudgetActualAccount::factory()->for($organization)->create([
         'code' => '6000',
         'name' => '販売費及び一般管理費',
         'account_type' => 'expense',
     ]);
 
     foreach ([
-        ['type' => 'budget', 'management_account_id' => $revenueAccount->id, 'amount' => '1000.00'],
-        ['type' => 'budget', 'management_account_id' => $expenseAccount->id, 'amount' => '600.00'],
-        ['type' => 'actual', 'management_account_id' => $revenueAccount->id, 'amount' => '900.00'],
-        ['type' => 'actual', 'management_account_id' => $expenseAccount->id, 'amount' => '650.00'],
+        ['type' => 'budget', 'budget_actual_account_id' => $revenueAccount->id, 'amount' => '1000.00'],
+        ['type' => 'budget', 'budget_actual_account_id' => $expenseAccount->id, 'amount' => '600.00'],
+        ['type' => 'actual', 'budget_actual_account_id' => $revenueAccount->id, 'amount' => '900.00'],
+        ['type' => 'actual', 'budget_actual_account_id' => $expenseAccount->id, 'amount' => '650.00'],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $organization->id,
             'department_id' => $department->id,
             'period' => '2026-09-01',
@@ -372,15 +372,15 @@ test('dashboard compares the selected fiscal year budget and actual profit or lo
         ]);
     }
 
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $revenueAccount->id,
+        'budget_actual_account_id' => $revenueAccount->id,
         'period' => '2026-03-01',
         'type' => 'actual',
         'amount' => '9999.00',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'period' => '2026-09-01',
         'type' => 'actual',
         'amount' => '9999.00',
@@ -424,20 +424,20 @@ test('dashboard summary components persist their fiscal years independently acro
     $user = User::factory()->for($organization)->create();
     $otherUser = User::factory()->for($organization)->create();
     $department = Department::factory()->for($organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($organization)->create();
 
     JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-03-31']);
     JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-04-01']);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2026-03-01',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $organization->id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2026-04-01',
     ]);
 
@@ -486,7 +486,7 @@ test('the dashboard renders the management section and link for administrators',
         ->assertSee('id="management-summary"', false)
         ->assertSee('href="'.route('management.index').'"', false)
         ->assertDontSee('href="'.route('departments.index').'"', false)
-        ->assertDontSee('href="'.route('management-accounts.index').'"', false)
+        ->assertDontSee('href="'.route('budget-actual-accounts.index').'"', false)
         ->assertDontSee('href="'.route('ledger-accounts.index').'"', false);
 })->with([
     'system administrator' => UserType::Admin,
@@ -504,7 +504,7 @@ test('company administrators see the ordered global navigation menu', function (
         ->assertSee('href="'.route('accounting-study.index').'"', false)
         ->assertSee('href="'.route('management.index').'"', false)
         ->assertDontSee('href="'.route('departments.index').'"', false)
-        ->assertDontSee('href="'.route('management-accounts.index').'"', false)
+        ->assertDontSee('href="'.route('budget-actual-accounts.index').'"', false)
         ->assertDontSee('href="'.route('ledger-accounts.index').'"', false)
         ->assertDontSee('href="'.route('companies.index').'"', false);
 });
@@ -529,7 +529,7 @@ test('general users do not see the global navigation management menu', function 
         ->assertSee('href="'.route('accounting-study.index').'"', false)
         ->assertDontSee('href="'.route('management.index').'"', false)
         ->assertDontSee('href="'.route('departments.index').'"', false)
-        ->assertDontSee('href="'.route('management-accounts.index').'"', false)
+        ->assertDontSee('href="'.route('budget-actual-accounts.index').'"', false)
         ->assertDontSee('href="'.route('ledger-accounts.index').'"', false)
         ->assertDontSee('href="'.route('companies.index').'"', false);
 });

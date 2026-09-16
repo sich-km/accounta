@@ -2,16 +2,16 @@
 
 namespace App\Models;
 
-use Database\Factories\ManagementAccountFactory;
+use Database\Factories\BudgetActualAccountFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-class ManagementAccount extends Model
+class BudgetActualAccount extends Model
 {
-    /** @use HasFactory<ManagementAccountFactory> */
+    /** @use HasFactory<BudgetActualAccountFactory> */
     use HasFactory;
 
     /**
@@ -36,8 +36,8 @@ class ManagementAccount extends Model
     ];
 
     /**
-     * @param  Builder<ManagementAccount>  $query
-     * @return Builder<ManagementAccount>
+     * @param  Builder<BudgetActualAccount>  $query
+     * @return Builder<BudgetActualAccount>
      */
     public function scopeForOrganization(Builder $query, int $organizationId): Builder
     {
@@ -49,9 +49,9 @@ class ManagementAccount extends Model
         return $this->belongsTo(Organization::class);
     }
 
-    public function monthlyAmounts(): HasMany
+    public function budgetActualEntries(): HasMany
     {
-        return $this->hasMany(MonthlyAmount::class);
+        return $this->hasMany(BudgetActualEntry::class);
     }
 
     /**

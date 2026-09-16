@@ -1,26 +1,26 @@
 <?php
 
-use App\Models\ManagementAccount;
+use App\Models\BudgetActualAccount;
 use App\Models\Organization;
 use App\Models\User;
 
-test('company administrators can create and view management accounts in their organization', function () {
+test('company administrators can create and view budget actual accounts in their organization', function () {
     $user = User::factory()->companyAdmin()->create();
 
     $this->actingAs($user)
-        ->get(route('management-accounts.create'))
+        ->get(route('budget-actual-accounts.create'))
         ->assertOk()
         ->assertSee('予実管理科目を登録');
 
     $this->actingAs($user)
-        ->post(route('management-accounts.store'), [
+        ->post(route('budget-actual-accounts.store'), [
             'code' => ' a001 ',
             'name' => ' 売上高 ',
             'account_type' => 'revenue',
         ])
-        ->assertRedirect(route('management-accounts.index'));
+        ->assertRedirect(route('budget-actual-accounts.index'));
 
-    $this->assertDatabaseHas('management_accounts', [
+    $this->assertDatabaseHas('budget_actual_accounts', [
         'organization_id' => $user->organization_id,
         'code' => 'A001',
         'name' => '売上高',
@@ -29,7 +29,7 @@ test('company administrators can create and view management accounts in their or
     ]);
 
     $this->actingAs($user)
-        ->get(route('management-accounts.index'))
+        ->get(route('budget-actual-accounts.index'))
         ->assertOk()
         ->assertSee('A001')
         ->assertSee('売上高')
@@ -37,55 +37,55 @@ test('company administrators can create and view management accounts in their or
         ->assertSeeText('管理へ戻る');
 });
 
-test('system administrators can update and disable their management accounts', function () {
+test('system administrators can update and disable their budget actual accounts', function () {
     $user = User::factory()->admin()->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     $this->actingAs($user)
-        ->put(route('management-accounts.update', $managementAccount), [
+        ->put(route('budget-actual-accounts.update', $budgetActualAccount), [
             'code' => 'A010',
             'name' => '外注費',
             'account_type' => 'expense',
         ])
-        ->assertRedirect(route('management-accounts.index'));
+        ->assertRedirect(route('budget-actual-accounts.index'));
 
     $this->actingAs($user)
-        ->patch(route('management-accounts.status', $managementAccount))
+        ->patch(route('budget-actual-accounts.status', $budgetActualAccount))
         ->assertRedirect();
 
-    $managementAccount->refresh();
+    $budgetActualAccount->refresh();
 
-    expect($managementAccount->code)->toBe('A010');
-    expect($managementAccount->name)->toBe('外注費');
-    expect($managementAccount->account_type)->toBe('expense');
-    expect($managementAccount->is_active)->toBeFalse();
+    expect($budgetActualAccount->code)->toBe('A010');
+    expect($budgetActualAccount->name)->toBe('外注費');
+    expect($budgetActualAccount->account_type)->toBe('expense');
+    expect($budgetActualAccount->is_active)->toBeFalse();
 });
 
-test('management accounts from another organization return 404', function () {
+test('budget actual accounts from another organization return 404', function () {
     $user = User::factory()->companyAdmin()->create();
-    $otherManagementAccount = ManagementAccount::factory()
+    $otherBudgetActualAccount = BudgetActualAccount::factory()
         ->for(Organization::factory())
         ->create();
 
     $this->actingAs($user)
-        ->get(route('management-accounts.edit', $otherManagementAccount))
+        ->get(route('budget-actual-accounts.edit', $otherBudgetActualAccount))
         ->assertNotFound();
 
     $this->actingAs($user)
-        ->patch(route('management-accounts.status', $otherManagementAccount))
+        ->patch(route('budget-actual-accounts.status', $otherBudgetActualAccount))
         ->assertNotFound();
 });
 
-test('regular users can only view management accounts without management controls', function () {
+test('regular users can only view budget actual accounts without management controls', function () {
     $user = User::factory()->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create([
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create([
         'code' => 'A100',
         'name' => '閲覧専用科目',
         'account_type' => 'expense',
     ]);
 
     $this->actingAs($user)
-        ->get(route('management-accounts.index'))
+        ->get(route('budget-actual-accounts.index'))
         ->assertOk()
         ->assertSee('A100')
         ->assertSee('閲覧専用科目')
@@ -95,11 +95,11 @@ test('regular users can only view management accounts without management control
         ->assertDontSeeText('管理へ戻る');
 
     $this->actingAs($user)
-        ->get(route('management-accounts.create'))
+        ->get(route('budget-actual-accounts.create'))
         ->assertForbidden();
 
     $this->actingAs($user)
-        ->post(route('management-accounts.store'), [
+        ->post(route('budget-actual-accounts.store'), [
             'code' => 'A200',
             'name' => '登録不可科目',
             'account_type' => 'expense',
@@ -107,11 +107,11 @@ test('regular users can only view management accounts without management control
         ->assertForbidden();
 
     $this->actingAs($user)
-        ->get(route('management-accounts.edit', $managementAccount))
+        ->get(route('budget-actual-accounts.edit', $budgetActualAccount))
         ->assertForbidden();
 
     $this->actingAs($user)
-        ->put(route('management-accounts.update', $managementAccount), [
+        ->put(route('budget-actual-accounts.update', $budgetActualAccount), [
             'code' => 'A101',
             'name' => '変更不可科目',
             'account_type' => 'expense',
@@ -119,11 +119,11 @@ test('regular users can only view management accounts without management control
         ->assertForbidden();
 
     $this->actingAs($user)
-        ->patch(route('management-accounts.status', $managementAccount))
+        ->patch(route('budget-actual-accounts.status', $budgetActualAccount))
         ->assertForbidden();
 
-    $this->assertDatabaseMissing('management_accounts', ['code' => 'A200']);
-    expect($managementAccount->fresh()->only(['code', 'name', 'account_type', 'is_active']))->toBe([
+    $this->assertDatabaseMissing('budget_actual_accounts', ['code' => 'A200']);
+    expect($budgetActualAccount->fresh()->only(['code', 'name', 'account_type', 'is_active']))->toBe([
         'code' => 'A100',
         'name' => '閲覧専用科目',
         'account_type' => 'expense',

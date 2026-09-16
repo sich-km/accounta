@@ -11,7 +11,7 @@
             name="code"
             type="text"
             class="mt-1 block w-full"
-            :value="old('code', $managementAccount?->code)"
+            :value="old('code', $budgetActualAccount?->code)"
             required
             autofocus
         />
@@ -25,7 +25,7 @@
             name="name"
             type="text"
             class="mt-1 block w-full"
-            :value="old('name', $managementAccount?->name)"
+            :value="old('name', $budgetActualAccount?->name)"
             required
         />
         <x-input-error for="name" class="mt-2" />
@@ -36,7 +36,7 @@
         <select id="account_type" name="account_type" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
             <option value="">選択してください</option>
             @foreach ($accountTypes as $value => $label)
-                <option value="{{ $value }}" @selected(old('account_type', $managementAccount?->account_type) === $value)>
+                <option value="{{ $value }}" @selected(old('account_type', $budgetActualAccount?->account_type) === $value)>
                     {{ $label }}
                 </option>
             @endforeach
@@ -45,7 +45,7 @@
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('management-accounts.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">
+        <a href="{{ route('budget-actual-accounts.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">
             キャンセル
         </a>
         <x-button>{{ $submitLabel }}</x-button>

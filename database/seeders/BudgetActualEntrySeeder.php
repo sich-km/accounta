@@ -2,34 +2,34 @@
 
 namespace Database\Seeders;
 
+use App\Models\BudgetActualAccount;
 use App\Models\Department;
-use App\Models\ManagementAccount;
 use App\Models\Organization;
 use Illuminate\Database\Seeder;
 
-class MonthlyAmountSeeder extends Seeder
+class BudgetActualEntrySeeder extends Seeder
 {
     private const string SAMPLE_MEMO_PREFIX = '初期サンプル: ';
 
     /**
-     * @var array<string, array{department_code: string, management_account_code: string, memo: string}>
+     * @var array<string, array{department_code: string, budget_actual_account_code: string, memo: string}>
      */
     private const array LINE_DEFINITIONS = [
-        'saas' => ['department_code' => 'D310', 'management_account_code' => '4300', 'memo' => '自社SaaSのサブスクリプション売上'],
-        'advertising_revenue' => ['department_code' => 'D310', 'management_account_code' => '4900', 'memo' => '自社SaaS内の広告売上'],
-        'development' => ['department_code' => 'D310', 'management_account_code' => '4100', 'memo' => '受託システム開発売上'],
-        'maintenance' => ['department_code' => 'D210', 'management_account_code' => '4200', 'memo' => '顧客システムの保守売上'],
-        'retail_sales' => ['department_code' => 'D410', 'management_account_code' => '4000', 'memo' => '商品Aの販売売上'],
-        'purchases' => ['department_code' => 'D410', 'management_account_code' => '5000', 'memo' => '商品Aの売上原価'],
-        'employee_salary' => ['department_code' => 'D120', 'management_account_code' => '6000', 'memo' => '社員1名の給与'],
-        'officer_compensation' => ['department_code' => 'D100', 'management_account_code' => '6060', 'memo' => '創業者の役員報酬'],
-        'legal_welfare' => ['department_code' => 'D120', 'management_account_code' => '6020', 'memo' => '会社負担の法定福利費'],
-        'cloud' => ['department_code' => 'D310', 'management_account_code' => '6200', 'memo' => 'SaaS・開発環境のクラウド利用料'],
-        'rent' => ['department_code' => 'D100', 'management_account_code' => '6500', 'memo' => '事務所の賃借料'],
-        'marketing' => ['department_code' => 'D410', 'management_account_code' => '6700', 'memo' => 'SaaS・商品Aの広告宣伝費'],
-        'payment_fees' => ['department_code' => 'D110', 'management_account_code' => '6800', 'memo' => '決済・振込手数料'],
-        'consumables' => ['department_code' => 'D100', 'management_account_code' => '6400', 'memo' => '事務用品・梱包資材等の消耗品費'],
-        'outsourcing' => ['department_code' => 'D310', 'management_account_code' => '6100', 'memo' => '受託開発等の外注費'],
+        'saas' => ['department_code' => 'D310', 'budget_actual_account_code' => '4300', 'memo' => '自社SaaSのサブスクリプション売上'],
+        'advertising_revenue' => ['department_code' => 'D310', 'budget_actual_account_code' => '4900', 'memo' => '自社SaaS内の広告売上'],
+        'development' => ['department_code' => 'D310', 'budget_actual_account_code' => '4100', 'memo' => '受託システム開発売上'],
+        'maintenance' => ['department_code' => 'D210', 'budget_actual_account_code' => '4200', 'memo' => '顧客システムの保守売上'],
+        'retail_sales' => ['department_code' => 'D410', 'budget_actual_account_code' => '4000', 'memo' => '商品Aの販売売上'],
+        'purchases' => ['department_code' => 'D410', 'budget_actual_account_code' => '5000', 'memo' => '商品Aの売上原価'],
+        'employee_salary' => ['department_code' => 'D120', 'budget_actual_account_code' => '6000', 'memo' => '社員1名の給与'],
+        'officer_compensation' => ['department_code' => 'D100', 'budget_actual_account_code' => '6060', 'memo' => '創業者の役員報酬'],
+        'legal_welfare' => ['department_code' => 'D120', 'budget_actual_account_code' => '6020', 'memo' => '会社負担の法定福利費'],
+        'cloud' => ['department_code' => 'D310', 'budget_actual_account_code' => '6200', 'memo' => 'SaaS・開発環境のクラウド利用料'],
+        'rent' => ['department_code' => 'D100', 'budget_actual_account_code' => '6500', 'memo' => '事務所の賃借料'],
+        'marketing' => ['department_code' => 'D410', 'budget_actual_account_code' => '6700', 'memo' => 'SaaS・商品Aの広告宣伝費'],
+        'payment_fees' => ['department_code' => 'D110', 'budget_actual_account_code' => '6800', 'memo' => '決済・振込手数料'],
+        'consumables' => ['department_code' => 'D100', 'budget_actual_account_code' => '6400', 'memo' => '事務用品・梱包資材等の消耗品費'],
+        'outsourcing' => ['department_code' => 'D310', 'budget_actual_account_code' => '6100', 'memo' => '受託開発等の外注費'],
     ];
 
     /**
@@ -81,6 +81,9 @@ class MonthlyAmountSeeder extends Seeder
         ['period' => '2026-04-01', 'saas' => 400000, 'advertising_revenue' => 75000, 'development' => 390000, 'maintenance' => 150000, 'retail_sales' => 360000, 'purchases' => 216000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 78000, 'rent' => 60000, 'marketing' => 38000, 'payment_fees' => 19000, 'consumables' => 25000, 'outsourcing' => 100000],
         ['period' => '2026-05-01', 'saas' => 420000, 'advertising_revenue' => 80000, 'development' => 410000, 'maintenance' => 160000, 'retail_sales' => 380000, 'purchases' => 228000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 82000, 'rent' => 60000, 'marketing' => 40000, 'payment_fees' => 20000, 'consumables' => 25000, 'outsourcing' => 150000],
         ['period' => '2026-06-01', 'saas' => 450000, 'advertising_revenue' => 85000, 'development' => 430000, 'maintenance' => 170000, 'retail_sales' => 400000, 'purchases' => 240000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 85000, 'rent' => 60000, 'marketing' => 45000, 'payment_fees' => 22000, 'consumables' => 28000, 'outsourcing' => 200000],
+        ['period' => '2026-07-01', 'saas' => 470000, 'advertising_revenue' => 88000, 'development' => 410000, 'maintenance' => 172000, 'retail_sales' => 405000, 'purchases' => 243000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 87000, 'rent' => 60000, 'marketing' => 46000, 'payment_fees' => 23000, 'consumables' => 29000, 'outsourcing' => 230000],
+        ['period' => '2026-08-01', 'saas' => 490000, 'advertising_revenue' => 92000, 'development' => 430000, 'maintenance' => 178000, 'retail_sales' => 425000, 'purchases' => 255000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 90000, 'rent' => 60000, 'marketing' => 49000, 'payment_fees' => 24000, 'consumables' => 30000, 'outsourcing' => 270000],
+        ['period' => '2026-09-01', 'saas' => 520000, 'advertising_revenue' => 100000, 'development' => 460000, 'maintenance' => 185000, 'retail_sales' => 460000, 'purchases' => 276000, 'employee_salary' => 200000, 'officer_compensation' => 250000, 'legal_welfare' => 70000, 'cloud' => 94000, 'rent' => 60000, 'marketing' => 52000, 'payment_fees' => 25000, 'consumables' => 32000, 'outsourcing' => 330000],
     ];
 
     public function run(): void
@@ -92,42 +95,42 @@ class MonthlyAmountSeeder extends Seeder
                     ->forOrganization($organization->id)
                     ->whereIn('code', array_column(self::LINE_DEFINITIONS, 'department_code'))
                     ->pluck('id', 'code');
-                $managementAccountIds = ManagementAccount::query()
+                $budgetActualAccountIds = BudgetActualAccount::query()
                     ->forOrganization($organization->id)
-                    ->whereIn('code', array_column(self::LINE_DEFINITIONS, 'management_account_code'))
+                    ->whereIn('code', array_column(self::LINE_DEFINITIONS, 'budget_actual_account_code'))
                     ->pluck('id', 'code');
-                $seededMonthlyAmountIds = [];
+                $seededBudgetActualEntryIds = [];
 
-                foreach (['budget' => self::BUDGETS, 'actual' => self::ACTUALS] as $type => $monthlyAmounts) {
-                    foreach ($monthlyAmounts as $monthlyAmount) {
+                foreach (['budget' => self::BUDGETS, 'actual' => self::ACTUALS] as $type => $periodEntries) {
+                    foreach ($periodEntries as $periodEntry) {
                         foreach (self::LINE_DEFINITIONS as $amountKey => $lineDefinition) {
                             $departmentId = $departmentIds->get($lineDefinition['department_code']);
-                            $managementAccountId = $managementAccountIds->get($lineDefinition['management_account_code']);
+                            $budgetActualAccountId = $budgetActualAccountIds->get($lineDefinition['budget_actual_account_code']);
 
-                            if ($departmentId === null || $managementAccountId === null) {
+                            if ($departmentId === null || $budgetActualAccountId === null) {
                                 continue;
                             }
 
-                            $seededMonthlyAmount = $organization->monthlyAmounts()->updateOrCreate(
+                            $seededBudgetActualEntry = $organization->budgetActualEntries()->updateOrCreate(
                                 [
                                     'department_id' => $departmentId,
-                                    'management_account_id' => $managementAccountId,
-                                    'period' => $monthlyAmount['period'],
+                                    'budget_actual_account_id' => $budgetActualAccountId,
+                                    'period' => $periodEntry['period'],
                                     'type' => $type,
                                     'memo' => self::SAMPLE_MEMO_PREFIX.$lineDefinition['memo'],
                                 ],
                                 [
-                                    'amount' => number_format($monthlyAmount[$amountKey], 2, '.', ''),
+                                    'amount' => number_format($periodEntry[$amountKey], 2, '.', ''),
                                 ],
                             );
-                            $seededMonthlyAmountIds[] = $seededMonthlyAmount->id;
+                            $seededBudgetActualEntryIds[] = $seededBudgetActualEntry->id;
                         }
                     }
                 }
 
-                $organization->monthlyAmounts()
+                $organization->budgetActualEntries()
                     ->where('memo', 'like', self::SAMPLE_MEMO_PREFIX.'%')
-                    ->whereNotIn('id', $seededMonthlyAmountIds)
+                    ->whereNotIn('id', $seededBudgetActualEntryIds)
                     ->delete();
             });
     }

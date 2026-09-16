@@ -2,7 +2,7 @@
 
 namespace App\Livewire\Dashboard;
 
-use App\Models\MonthlyAmount;
+use App\Models\BudgetActualEntry;
 use App\Models\Organization;
 use App\Models\User;
 use App\Services\DashboardFiscalYearPreferenceService;
@@ -39,7 +39,7 @@ class BudgetActualSummary extends Component
         $organization = $this->organization($user);
         $fiscalYearStartMonth = $this->fiscalYearStartMonth($organization);
         $availableFiscalYears = $fiscalYearService->availableYears(
-            MonthlyAmount::query()
+            BudgetActualEntry::query()
                 ->forOrganization($organization->id)
                 ->distinct()
                 ->pluck('period'),
@@ -53,20 +53,20 @@ class BudgetActualSummary extends Component
 
         $preferenceService->putFiscalYear($user, self::PREFERENCE_SECTION, $this->fiscalYear);
         $period = $fiscalYearService->period($this->fiscalYear, $fiscalYearStartMonth);
-        $totals = MonthlyAmount::query()
+        $totals = BudgetActualEntry::query()
             ->forOrganization($organization->id)
-            ->whereBetween('monthly_amounts.period', [
+            ->whereBetween('budget_actual_entries.period', [
                 $period['start']->toDateString(),
                 $period['end']->toDateString(),
             ])
-            ->join('management_accounts', 'management_accounts.id', '=', 'monthly_amounts.management_account_id')
+            ->join('budget_actual_accounts', 'budget_actual_accounts.id', '=', 'budget_actual_entries.budget_actual_account_id')
             ->toBase()
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_revenue")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_expenses")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_revenue")
-            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_expenses")
-            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'budget' THEN 1 ELSE 0 END) AS budget_records")
-            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'actual' THEN 1 ELSE 0 END) AS actual_records")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'budget' AND budget_actual_accounts.account_type = 'revenue' THEN budget_actual_entries.amount ELSE 0 END), 0) AS budget_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'budget' AND budget_actual_accounts.account_type = 'expense' THEN budget_actual_entries.amount ELSE 0 END), 0) AS budget_expenses")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'actual' AND budget_actual_accounts.account_type = 'revenue' THEN budget_actual_entries.amount ELSE 0 END), 0) AS actual_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN budget_actual_entries.type = 'actual' AND budget_actual_accounts.account_type = 'expense' THEN budget_actual_entries.amount ELSE 0 END), 0) AS actual_expenses")
+            ->selectRaw("SUM(CASE WHEN budget_actual_entries.type = 'budget' THEN 1 ELSE 0 END) AS budget_records")
+            ->selectRaw("SUM(CASE WHEN budget_actual_entries.type = 'actual' THEN 1 ELSE 0 END) AS actual_records")
             ->first();
 
         return view('livewire.dashboard.budget-actual-summary', [

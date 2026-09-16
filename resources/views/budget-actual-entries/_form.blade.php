@@ -1,5 +1,5 @@
 @php
-    $canSubmit = $departments->isNotEmpty() && $managementAccounts->isNotEmpty();
+    $canSubmit = $departments->isNotEmpty() && $budgetActualAccounts->isNotEmpty();
 @endphp
 
 @unless ($canSubmit)
@@ -23,7 +23,7 @@
             min="1900-01"
             max="9999-12"
             class="mt-1 block w-full"
-            :value="old('period', $amount?->period?->format('Y-m') ?? now()->format('Y-m'))"
+            :value="old('period', $budgetActualEntry?->period?->format('Y-m') ?? now()->format('Y-m'))"
             required
             autofocus
         />
@@ -35,7 +35,7 @@
         <select id="department_id" name="department_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
             <option value="">選択してください</option>
             @foreach ($departments as $department)
-                <option value="{{ $department->id }}" @selected((int) old('department_id', $amount?->department_id) === $department->id)>
+                <option value="{{ $department->id }}" @selected((int) old('department_id', $budgetActualEntry?->department_id) === $department->id)>
                     {{ $department->code }} {{ $department->name }}{{ $department->is_active ? '' : '（無効）' }}
                 </option>
             @endforeach
@@ -44,24 +44,24 @@
     </div>
 
     <div>
-        <x-label for="management_account_id" value="予実管理科目" />
-        <select id="management_account_id" name="management_account_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
+        <x-label for="budget_actual_account_id" value="予実管理科目" />
+        <select id="budget_actual_account_id" name="budget_actual_account_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500" required>
             <option value="">選択してください</option>
-            @foreach ($managementAccounts as $managementAccount)
-                <option value="{{ $managementAccount->id }}" @selected((int) old('management_account_id', $amount?->management_account_id) === $managementAccount->id)>
-                    {{ $managementAccount->code }} {{ $managementAccount->name }}{{ $managementAccount->is_active ? '' : '（無効）' }}
+            @foreach ($budgetActualAccounts as $budgetActualAccount)
+                <option value="{{ $budgetActualAccount->id }}" @selected((int) old('budget_actual_account_id', $budgetActualEntry?->budget_actual_account_id) === $budgetActualAccount->id)>
+                    {{ $budgetActualAccount->code }} {{ $budgetActualAccount->name }}{{ $budgetActualAccount->is_active ? '' : '（無効）' }}
                 </option>
             @endforeach
         </select>
-        <x-input-error for="management_account_id" class="mt-2" />
+        <x-input-error for="budget_actual_account_id" class="mt-2" />
     </div>
 
     <fieldset>
         <legend class="block text-sm font-medium text-gray-700">区分</legend>
         <div class="mt-2 flex gap-6">
-            @foreach ($amountTypes as $value => $label)
+            @foreach ($entryTypes as $value => $label)
                 <label class="flex items-center gap-2 text-sm text-gray-700">
-                    <input type="radio" name="type" value="{{ $value }}" class="border-gray-300 text-indigo-600 focus:ring-indigo-500" @checked(old('type', $amount?->type ?? 'budget') === $value)>
+                    <input type="radio" name="type" value="{{ $value }}" class="border-gray-300 text-indigo-600 focus:ring-indigo-500" @checked(old('type', $budgetActualEntry?->type ?? 'budget') === $value)>
                     {{ $label }}
                 </label>
             @endforeach
@@ -77,7 +77,7 @@
             type="text"
             inputmode="decimal"
             class="mt-1 block w-full"
-            :value="old('amount', $amount?->amount)"
+            :value="old('amount', $budgetActualEntry?->amount)"
             required
         />
         <x-input-error for="amount" class="mt-2" />
@@ -85,12 +85,12 @@
 
     <div>
         <x-label for="memo" value="メモ" />
-        <textarea id="memo" name="memo" rows="4" maxlength="500" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('memo', $amount?->memo) }}</textarea>
+        <textarea id="memo" name="memo" rows="4" maxlength="500" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">{{ old('memo', $budgetActualEntry?->memo) }}</textarea>
         <x-input-error for="memo" class="mt-2" />
     </div>
 
     <div class="flex items-center justify-end gap-3">
-        <a href="{{ route('amounts.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">
+        <a href="{{ route('budget-actual-entries.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">
             キャンセル
         </a>
         <x-button :disabled="! $canSubmit">{{ $submitLabel }}</x-button>

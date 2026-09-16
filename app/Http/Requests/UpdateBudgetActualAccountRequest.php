@@ -2,13 +2,13 @@
 
 namespace App\Http\Requests;
 
-use App\Models\ManagementAccount;
+use App\Models\BudgetActualAccount;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
-class UpdateManagementAccountRequest extends FormRequest
+class UpdateBudgetActualAccountRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -31,12 +31,12 @@ class UpdateManagementAccountRequest extends FormRequest
                 'string',
                 'max:32',
                 'regex:/^[A-Z0-9][A-Z0-9_-]*$/',
-                Rule::unique('management_accounts', 'code')
+                Rule::unique('budget_actual_accounts', 'code')
                     ->where(fn ($query) => $query->where('organization_id', $this->user()->organization_id))
-                    ->ignore((int) $this->route('management_account')),
+                    ->ignore((int) $this->route('budget_actual_account')),
             ],
             'name' => ['required', 'string', 'max:100'],
-            'account_type' => ['required', Rule::in(array_keys(ManagementAccount::TYPES))],
+            'account_type' => ['required', Rule::in(array_keys(BudgetActualAccount::TYPES))],
         ];
     }
 

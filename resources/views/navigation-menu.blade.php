@@ -1,4 +1,4 @@
-@php($managementMenuIsActive = request()->routeIs('management.*', 'departments.*', 'management-accounts.*', 'ledger-accounts.*', 'companies.*'))
+@php($managementMenuIsActive = request()->routeIs('management.*', 'departments.*', 'budget-actual-accounts.*', 'ledger-accounts.*', 'companies.*'))
 
 <nav x-data="{ open: false }" class="bg-white border-b border-gray-100">
     <!-- Primary Navigation Menu -->
@@ -23,7 +23,7 @@
                     <x-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
                         固定資産
                     </x-nav-link>
-                    <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
+                    <x-nav-link href="{{ route('budget-actual-entries.index') }}" :active="request()->routeIs('budget-actual-entries.*')">
                         予実管理
                     </x-nav-link>
                     <x-nav-link href="{{ route('accounting-study.index') }}" :active="request()->routeIs('accounting-study.*')">
@@ -168,7 +168,7 @@
             <x-responsive-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
                 固定資産
             </x-responsive-nav-link>
-            <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
+            <x-responsive-nav-link href="{{ route('budget-actual-entries.index') }}" :active="request()->routeIs('budget-actual-entries.*')">
                 予実管理
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('accounting-study.index') }}" :active="request()->routeIs('accounting-study.*')">

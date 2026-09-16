@@ -41,6 +41,9 @@ class JournalEntrySeeder extends Seeder
         ['month' => 4, 'saas' => 400000, 'advertising_revenue' => 75000, 'development' => 390000, 'maintenance' => 150000, 'retail_sales' => 360000, 'purchases' => 216000, 'cloud' => 78000, 'rent' => 60000, 'marketing' => 38000, 'payment_fees' => 19000, 'consumables' => 25000, 'outsourcing' => 100000],
         ['month' => 5, 'saas' => 420000, 'advertising_revenue' => 80000, 'development' => 410000, 'maintenance' => 160000, 'retail_sales' => 380000, 'purchases' => 228000, 'cloud' => 82000, 'rent' => 60000, 'marketing' => 40000, 'payment_fees' => 20000, 'consumables' => 25000, 'outsourcing' => 150000],
         ['month' => 6, 'saas' => 450000, 'advertising_revenue' => 85000, 'development' => 430000, 'maintenance' => 170000, 'retail_sales' => 400000, 'purchases' => 240000, 'cloud' => 85000, 'rent' => 60000, 'marketing' => 45000, 'payment_fees' => 22000, 'consumables' => 28000, 'outsourcing' => 200000],
+        ['month' => 7, 'saas' => 470000, 'advertising_revenue' => 88000, 'development' => 410000, 'maintenance' => 172000, 'retail_sales' => 405000, 'purchases' => 243000, 'cloud' => 87000, 'rent' => 60000, 'marketing' => 46000, 'payment_fees' => 23000, 'consumables' => 29000, 'outsourcing' => 230000],
+        ['month' => 8, 'saas' => 490000, 'advertising_revenue' => 92000, 'development' => 430000, 'maintenance' => 178000, 'retail_sales' => 425000, 'purchases' => 255000, 'cloud' => 90000, 'rent' => 60000, 'marketing' => 49000, 'payment_fees' => 24000, 'consumables' => 30000, 'outsourcing' => 270000],
+        ['month' => 9, 'saas' => 520000, 'advertising_revenue' => 100000, 'development' => 460000, 'maintenance' => 185000, 'retail_sales' => 460000, 'purchases' => 276000, 'cloud' => 94000, 'rent' => 60000, 'marketing' => 52000, 'payment_fees' => 25000, 'consumables' => 32000, 'outsourcing' => 330000],
     ];
 
     public function run(): void
@@ -121,6 +124,36 @@ class JournalEntrySeeder extends Seeder
     {
         return [
             [
+                'entry_date' => '2025-05-01',
+                'originating_department' => 'D210',
+                'description' => '業務用iPadの取得',
+                'notes' => '顧客対応および保守業務で使用するiPadを120,000円で購入し、工具器具備品として計上。',
+                'lines' => [
+                    $this->line('debit', '1530', 120000, 'D210', '業務用iPadの取得価額'),
+                    $this->line('credit', '1030', 120000, null, '購入代金を普通預金から支払'),
+                ],
+            ],
+            [
+                'entry_date' => '2025-12-31',
+                'originating_department' => 'D210',
+                'description' => '業務用iPadの前期減価償却',
+                'notes' => '2025年5月に使用開始した業務用iPadについて、2025年12月までの8か月分の減価償却費20,000円を計上。',
+                'lines' => [
+                    $this->line('debit', '7020', 20000, 'D210', '業務用iPadの前期減価償却費'),
+                    $this->line('credit', '1531', 20000, 'D210', '業務用iPadの減価償却累計額'),
+                ],
+            ],
+            [
+                'entry_date' => self::YEAR.'-06-18',
+                'originating_department' => 'D130',
+                'description' => '旧ネットワーク機器の売却時減価償却',
+                'notes' => '旧ネットワーク機器の売却に先立ち、当期分の減価償却費20,000円を計上。',
+                'lines' => [
+                    $this->line('debit', '7020', 20000, 'D130', '売却日までの減価償却費'),
+                    $this->line('credit', '1531', 20000, 'D130', '売却日までの減価償却累計額'),
+                ],
+            ],
+            [
                 'entry_date' => self::YEAR.'-06-18',
                 'originating_department' => 'D130',
                 'description' => '旧ネットワーク機器の売却',
@@ -140,6 +173,37 @@ class JournalEntrySeeder extends Seeder
                 'lines' => [
                     $this->line('debit', '7500', 30000, 'D110', '減損による投資有価証券評価損'),
                     $this->line('credit', '1710', 30000, null, '投資有価証券の帳簿価額を減額'),
+                ],
+            ],
+            [
+                'entry_date' => self::YEAR.'-09-05',
+                'originating_department' => 'D210',
+                'description' => '故障iPadの除却時減価償却',
+                'notes' => '故障により除却する業務用iPadについて、2026年1月から9月までの当期減価償却費22,500円を計上。',
+                'lines' => [
+                    $this->line('debit', '7020', 22500, 'D210', '除却日までの減価償却費'),
+                    $this->line('credit', '1531', 22500, 'D210', '除却日までの減価償却累計額'),
+                ],
+            ],
+            [
+                'entry_date' => self::YEAR.'-09-05',
+                'originating_department' => 'D210',
+                'description' => '故障iPadの除却',
+                'notes' => '2025年5月に取得した業務用iPadが故障したため除却し、除却時帳簿価額77,500円を固定資産除却損として計上。',
+                'lines' => [
+                    $this->line('debit', '1531', 42500, 'D210', '除却時点の減価償却累計額を取り崩し'),
+                    $this->line('debit', '7530', 77500, 'D210', '業務用iPadの固定資産除却損'),
+                    $this->line('credit', '1530', 120000, 'D210', '故障した業務用iPadの取得価額を除却'),
+                ],
+            ],
+            [
+                'entry_date' => self::YEAR.'-09-10',
+                'originating_department' => 'D210',
+                'description' => '買替用iPadの取得',
+                'notes' => '故障除却したiPadの代替として新しい業務用iPadを150,000円で購入し、工具器具備品として計上。',
+                'lines' => [
+                    $this->line('debit', '1530', 150000, 'D210', '買替用iPadの取得価額'),
+                    $this->line('credit', '1030', 150000, null, '購入代金を普通預金から支払'),
                 ],
             ],
         ];

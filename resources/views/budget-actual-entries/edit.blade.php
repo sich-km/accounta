@@ -6,10 +6,10 @@
     <div class="py-8">
         <div class="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
             <div class="overflow-hidden bg-white p-6 shadow-sm sm:rounded-lg">
-                @include('amounts._form', [
-                    'action' => route('amounts.update', $amount),
+                @include('budget-actual-entries._form', [
+                    'action' => route('budget-actual-entries.update', $budgetActualEntry),
                     'method' => 'PUT',
-                    'amount' => $amount,
+                    'budgetActualEntry' => $budgetActualEntry,
                     'submitLabel' => '更新',
                 ])
             </div>

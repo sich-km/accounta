@@ -2,10 +2,10 @@
 
 use App\Enums\LedgerAccountType;
 use App\Enums\UserType;
+use App\Models\BudgetActualEntry;
 use App\Models\Company;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
-use App\Models\MonthlyAmount;
 use App\Models\User;
 use Database\Seeders\InitialTenantSeeder;
 use Illuminate\Support\Collection;
@@ -45,12 +45,12 @@ test('database seeder creates the initial tenant admin and default masters once'
         'code' => 'D100',
         'name' => '経営企画部',
     ]);
-    $this->assertDatabaseHas('management_accounts', [
+    $this->assertDatabaseHas('budget_actual_accounts', [
         'organization_id' => $organization->id,
         'code' => '1000',
         'name' => '現金及び預金',
     ]);
-    $this->assertDatabaseHas('management_accounts', [
+    $this->assertDatabaseHas('budget_actual_accounts', [
         'organization_id' => $organization->id,
         'code' => '6060',
         'name' => '役員報酬',
@@ -176,8 +176,8 @@ test('database seeder creates the initial tenant admin and default masters once'
     $softwareDevelopmentDepartment = $organization->departments()->where('code', 'D310')->firstOrFail();
     $hrDepartment = $organization->departments()->where('code', 'D120')->firstOrFail();
     $domesticSalesDepartment = $organization->departments()->where('code', 'D410')->firstOrFail();
-    $softwareLicenseSales = $organization->managementAccounts()->where('code', '4300')->firstOrFail();
-    $officerCompensation = $organization->managementAccounts()->where('code', '6060')->firstOrFail();
+    $softwareLicenseSales = $organization->budgetActualAccounts()->where('code', '4300')->firstOrFail();
+    $officerCompensation = $organization->budgetActualAccounts()->where('code', '6060')->firstOrFail();
     $salaryJournalEntry = $organization->journalEntries()->whereDate('entry_date', '2026-04-25')->firstOrFail();
     $employeeSalaryAccount = $organization->ledgerAccounts()->where('code', '6000')->firstOrFail();
     $officerCompensationAccount = $organization->ledgerAccounts()->where('code', '6060')->firstOrFail();
@@ -196,37 +196,37 @@ test('database seeder creates the initial tenant admin and default masters once'
         'description' => '4月創業者役員報酬',
     ]);
 
-    $this->assertDatabaseHas('monthly_amounts', [
+    $this->assertDatabaseHas('budget_actual_entries', [
         'organization_id' => $organization->id,
         'department_id' => $softwareDevelopmentDepartment->id,
-        'management_account_id' => $softwareLicenseSales->id,
+        'budget_actual_account_id' => $softwareLicenseSales->id,
         'period' => '2025-01-01',
         'type' => 'actual',
         'amount' => '250000.00',
         'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
     ]);
-    $this->assertDatabaseHas('monthly_amounts', [
+    $this->assertDatabaseHas('budget_actual_entries', [
         'organization_id' => $organization->id,
         'department_id' => $softwareDevelopmentDepartment->id,
-        'management_account_id' => $softwareLicenseSales->id,
+        'budget_actual_account_id' => $softwareLicenseSales->id,
         'period' => '2026-04-01',
         'type' => 'budget',
         'amount' => '390000.00',
         'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
     ]);
-    $this->assertDatabaseHas('monthly_amounts', [
+    $this->assertDatabaseHas('budget_actual_entries', [
         'organization_id' => $organization->id,
         'department_id' => $softwareDevelopmentDepartment->id,
-        'management_account_id' => $softwareLicenseSales->id,
+        'budget_actual_account_id' => $softwareLicenseSales->id,
         'period' => '2026-04-01',
         'type' => 'actual',
         'amount' => '400000.00',
         'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
     ]);
-    $this->assertDatabaseHas('monthly_amounts', [
+    $this->assertDatabaseHas('budget_actual_entries', [
         'organization_id' => $organization->id,
         'department_id' => $managementDepartment->id,
-        'management_account_id' => $officerCompensation->id,
+        'budget_actual_account_id' => $officerCompensation->id,
         'period' => '2027-03-01',
         'type' => 'budget',
         'amount' => '250000.00',
@@ -249,13 +249,33 @@ test('database seeder creates the initial tenant admin and default masters once'
             'status' => 'held',
         ]);
     }
-    expect($organization->monthlyAmounts()->count())->toBe(585);
-    expect($organization->monthlyAmounts()->where('type', 'budget')->count())->toBe(360);
-    expect($organization->monthlyAmounts()->where('type', 'actual')->count())->toBe(225);
-    expect($organization->monthlyAmounts()->where('type', 'actual')->whereDate('period', '>=', '2026-07-01')->exists())->toBeFalse();
-    expect($organization->fixedAssets()->count())->toBe(6);
+    foreach ([
+        ['FA-INF-OLD-001', '旧ネットワーク機器（売却済）', $informationSystemsDepartment->id, '200000.00', '20000.00', '120000.00', 'sold'],
+        ['FA-TAB-001', '業務用iPad（故障除却）', $csDepartment->id, '120000.00', '22500.00', '42500.00', 'retired'],
+        ['FA-TAB-002', '買替用iPad', $csDepartment->id, '150000.00', '0.00', '0.00', 'held'],
+    ] as [$assetCode, $assetName, $departmentId, $acquisitionCost, $currentDepreciation, $accumulatedDepreciation, $status]) {
+        $this->assertDatabaseHas('fixed_assets', [
+            'organization_id' => $organization->id,
+            'department_id' => $departmentId,
+            'asset_code' => $assetCode,
+            'asset_name' => $assetName,
+            'acquisition_cost' => $acquisitionCost,
+            'current_period_depreciation_expense' => $currentDepreciation,
+            'accumulated_depreciation' => $accumulatedDepreciation,
+            'status' => $status,
+        ]);
+    }
+    expect($organization->fixedAssets()
+        ->where('status', 'held')
+        ->where('current_period_depreciation_expense', '!=', 0)
+        ->exists())->toBeFalse();
+    expect($organization->budgetActualEntries()->count())->toBe(630);
+    expect($organization->budgetActualEntries()->where('type', 'budget')->count())->toBe(360);
+    expect($organization->budgetActualEntries()->where('type', 'actual')->count())->toBe(270);
+    expect($organization->budgetActualEntries()->where('type', 'actual')->whereDate('period', '>=', '2026-10-01')->exists())->toBeFalse();
+    expect($organization->fixedAssets()->count())->toBe(9);
     expect($organization->ledgerAccounts()->count())->toBe(133);
-    expect($organization->journalEntries()->count())->toBe(147);
+    expect($organization->journalEntries()->count())->toBe(177);
 
     $priorYearJournalEntries = $organization->journalEntries()
         ->whereBetween('entry_date', ['2025-01-01', '2025-12-31'])
@@ -266,7 +286,7 @@ test('database seeder creates the initial tenant admin and default masters once'
     );
 
     $journalEntries = $organization->journalEntries()
-        ->whereBetween('entry_date', ['2026-01-01', '2026-06-30'])
+        ->whereBetween('entry_date', ['2026-01-01', '2026-09-30'])
         ->with('lines.ledgerAccount')
         ->get();
     $journalEntriesByMonth = $journalEntries->groupBy(
@@ -279,15 +299,15 @@ test('database seeder creates the initial tenant admin and default masters once'
     expect($journalEntries->every(
         fn (JournalEntry $journalEntry): bool => filled($journalEntry->notes),
     ))->toBeTrue();
-    expect($journalEntries->pluck('notes')->unique()->count())->toBe(51);
-    expect($priorYearJournalEntries)->toHaveCount(96);
+    expect($journalEntries->pluck('notes')->unique()->count())->toBe(79);
+    expect($priorYearJournalEntries)->toHaveCount(98);
     expect($priorYearJournalEntries->every(
         fn (JournalEntry $journalEntry): bool => $journalEntry->debitTotal() === $journalEntry->creditTotal(),
     ))->toBeTrue();
     expect($priorYearJournalEntries->every(
         fn (JournalEntry $journalEntry): bool => filled($journalEntry->notes),
     ))->toBeTrue();
-    expect($organization->journalEntries()->pluck('notes')->unique()->count())->toBe(147);
+    expect($organization->journalEntries()->pluck('notes')->unique()->count())->toBe(177);
     expect($organization->journalEntries()
         ->where('notes', '小規模SaaS・IT支援・小売業の月次サンプル仕訳')
         ->exists())->toBeFalse();
@@ -322,18 +342,29 @@ test('database seeder creates the initial tenant admin and default masters once'
         'amount' => '30000.00',
         'description' => '減損による投資有価証券評価損',
     ]);
+    $fixedAssetRetirementEntry = $organization->journalEntries()
+        ->where('description', '故障iPadの除却')
+        ->firstOrFail();
+    $fixedAssetRetirementLossAccount = $organization->ledgerAccounts()->where('code', '7530')->firstOrFail();
+    $this->assertDatabaseHas('journal_entry_lines', [
+        'journal_entry_id' => $fixedAssetRetirementEntry->id,
+        'ledger_account_id' => $fixedAssetRetirementLossAccount->id,
+        'side' => 'debit',
+        'amount' => '77500.00',
+        'description' => '業務用iPadの固定資産除却損',
+    ]);
 
-    $monthlyAmounts = $organization->monthlyAmounts()
-        ->with('managementAccount')
+    $budgetActualEntries = $organization->budgetActualEntries()
+        ->with('budgetActualAccount')
         ->get();
-    $monthlyProfit = fn (string $type): array => $monthlyAmounts
+    $monthlyProfit = fn (string $type): array => $budgetActualEntries
         ->where('type', $type)
-        ->groupBy(fn (MonthlyAmount $monthlyAmount): string => $monthlyAmount->period->format('Y-m'))
-        ->map(function (Collection $amounts): int {
-            return $amounts->reduce(function (int $profit, MonthlyAmount $monthlyAmount): int {
-                return match ($monthlyAmount->managementAccount->account_type) {
-                    'revenue' => $profit + (int) $monthlyAmount->amount,
-                    'expense' => $profit - (int) $monthlyAmount->amount,
+        ->groupBy(fn (BudgetActualEntry $budgetActualEntry): string => $budgetActualEntry->period->format('Y-m'))
+        ->map(function (Collection $budgetActualEntries): int {
+            return $budgetActualEntries->reduce(function (int $profit, BudgetActualEntry $budgetActualEntry): int {
+                return match ($budgetActualEntry->budgetActualAccount->account_type) {
+                    'revenue' => $profit + (int) $budgetActualEntry->amount,
+                    'expense' => $profit - (int) $budgetActualEntry->amount,
                     default => $profit,
                 };
             }, 0);
@@ -383,9 +414,12 @@ test('database seeder creates the initial tenant admin and default masters once'
         '2026-04' => 319000,
         '2026-05' => 325000,
         '2026-06' => 335000,
+        '2026-07' => 307000,
+        '2026-08' => 317000,
+        '2026-09' => 336000,
     ]);
 
-    $priorYearMonthlyProfits = [1 => 10000, 2 => -20000, 3 => 5000, 4 => 15000, 5 => -10000, 6 => 20000, 7 => 0, 8 => 10000, 9 => 15000, 10 => -5000, 11 => 25000, 12 => 35000];
+    $priorYearMonthlyProfits = [1 => 10000, 2 => -20000, 3 => 5000, 4 => 15000, 5 => -10000, 6 => 20000, 7 => 0, 8 => 10000, 9 => 15000, 10 => -5000, 11 => 25000, 12 => 15000];
 
     foreach ($priorYearMonthlyProfits as $month => $expectedProfit) {
         $profit = $priorYearJournalEntriesByMonth[$month]
@@ -401,9 +435,9 @@ test('database seeder creates the initial tenant admin and default masters once'
         expect($profit)->toBe($expectedProfit);
     }
 
-    expect(array_sum($priorYearMonthlyProfits))->toBe(100000);
+    expect(array_sum($priorYearMonthlyProfits))->toBe(80000);
 
-    foreach ([1 => 305000, 2 => 323000, 3 => 313000, 4 => 319000, 5 => 325000, 6 => 325000] as $month => $expectedProfit) {
+    foreach ([1 => 305000, 2 => 323000, 3 => 313000, 4 => 319000, 5 => 325000, 6 => 305000, 7 => 307000, 8 => 317000, 9 => 236000] as $month => $expectedProfit) {
         $profit = $journalEntriesByMonth[$month]
             ->flatMap(fn (JournalEntry $journalEntry) => $journalEntry->lines)
             ->reduce(function (int $profit, JournalEntryLine $line): int {
@@ -417,11 +451,11 @@ test('database seeder creates the initial tenant admin and default masters once'
         expect($profit)->toBe($expectedProfit);
     }
 
-    expect($organization->fixedAssets()->where('asset_code', 'FA-SW-001')->firstOrFail()->bookValue())->toBe('1050000.00');
+    expect($organization->fixedAssets()->where('asset_code', 'FA-SW-001')->firstOrFail()->bookValue())->toBe('1200000.00');
 
     $departmentCount = $organization->departments()->count();
-    $managementAccountCount = $organization->managementAccounts()->count();
-    $monthlyAmountCount = $organization->monthlyAmounts()->count();
+    $budgetActualAccountCount = $organization->budgetActualAccounts()->count();
+    $budgetActualEntryCount = $organization->budgetActualEntries()->count();
     $fixedAssetCount = $organization->fixedAssets()->count();
     $ledgerAccountCount = $organization->ledgerAccounts()->count();
     $journalEntryCount = $organization->journalEntries()->count();
@@ -435,8 +469,8 @@ test('database seeder creates the initial tenant admin and default masters once'
     $this->assertDatabaseCount('organizations', 1);
     $this->assertDatabaseCount('users', 3);
     expect($organization->departments()->count())->toBe($departmentCount);
-    expect($organization->managementAccounts()->count())->toBe($managementAccountCount);
-    expect($organization->monthlyAmounts()->count())->toBe($monthlyAmountCount);
+    expect($organization->budgetActualAccounts()->count())->toBe($budgetActualAccountCount);
+    expect($organization->budgetActualEntries()->count())->toBe($budgetActualEntryCount);
     expect($organization->fixedAssets()->count())->toBe($fixedAssetCount);
     expect($organization->ledgerAccounts()->count())->toBe($ledgerAccountCount);
     expect($organization->journalEntries()->count())->toBe($journalEntryCount);

@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Models\MonthlyAmount;
+use App\Models\BudgetActualEntry;
 use Illuminate\Database\Eloquent\Builder;
 use Maatwebsite\Excel\Concerns\FromQuery;
 use Maatwebsite\Excel\Concerns\WithColumnFormatting;
@@ -18,22 +18,22 @@ use PhpOffice\PhpSpreadsheet\Shared\Date;
 use PhpOffice\PhpSpreadsheet\Style\NumberFormat;
 
 /**
- * @implements WithMapping<MonthlyAmount>
+ * @implements WithMapping<BudgetActualEntry>
  */
-class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithColumnFormatting, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
+class BudgetActualEntriesSheetExport extends DefaultValueBinder implements FromQuery, WithColumnFormatting, WithColumnWidths, WithCustomValueBinder, WithHeadings, WithMapping, WithTitle
 {
     public function __construct(private readonly int $organizationId) {}
 
     /**
-     * @return Builder<MonthlyAmount>
+     * @return Builder<BudgetActualEntry>
      */
     public function query(): Builder
     {
-        return MonthlyAmount::query()
+        return BudgetActualEntry::query()
             ->forOrganization($this->organizationId)
             ->with([
                 'department:id,code',
-                'managementAccount:id,code',
+                'budgetActualAccount:id,code',
             ])
             ->orderByDesc('period')
             ->orderByDesc('id');
@@ -49,7 +49,7 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
             'Year',
             'Month',
             'DepartmentCode',
-            'ManagementAccountCode',
+            'BudgetActualAccountCode',
             'Type',
             'Amount',
             'Memo',
@@ -61,13 +61,13 @@ class AmountsSheetExport extends DefaultValueBinder implements FromQuery, WithCo
      */
     public function map(mixed $row): array
     {
-        /** @var MonthlyAmount $row */
+        /** @var BudgetActualEntry $row */
         return [
             Date::dateTimeToExcel($row->period),
             $row->period->year,
             $row->period->month,
             $row->department->code,
-            $row->managementAccount->code,
+            $row->budgetActualAccount->code,
             $row->type,
             (float) $row->amount,
             $row->memo,

@@ -10,7 +10,7 @@
                     <h3 class="text-lg font-semibold text-gray-900">部門マスタ</h3>
                     <p class="mt-2 text-sm text-gray-600">入力に使用する部門を管理します。</p>
                 </a>
-                <a href="{{ route('management-accounts.index') }}" class="rounded-lg border border-transparent bg-white p-6 shadow-sm transition hover:border-indigo-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                <a href="{{ route('budget-actual-accounts.index') }}" class="rounded-lg border border-transparent bg-white p-6 shadow-sm transition hover:border-indigo-200 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
                     <h3 class="text-lg font-semibold text-gray-900">予実管理科目マスタ</h3>
                     <p class="mt-2 text-sm text-gray-600">予算・実績で使用する管理科目を管理します。</p>
                 </a>

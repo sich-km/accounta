@@ -1,31 +1,31 @@
 <?php
 
+use App\Models\BudgetActualAccount;
+use App\Models\BudgetActualEntry;
 use App\Models\Department;
-use App\Models\ManagementAccount;
-use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
 use Carbon\CarbonImmutable;
 
-test('monthly amount index uses the shared action menu', function () {
+test('budget actual entry index uses the shared action menu', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => Department::factory()->for($user->organization),
-        'management_account_id' => ManagementAccount::factory()->for($user->organization),
+        'budget_actual_account_id' => BudgetActualAccount::factory()->for($user->organization),
         'period' => '2026-04-01',
     ]);
 
-    $this->actingAs($user)->get(route('amounts.index'))
+    $this->actingAs($user)->get(route('budget-actual-entries.index'))
         ->assertViewHas('currentFiscalYear', 2026)
         ->assertViewHas('selectedYear', 2026)
-        ->assertSee('<a href="'.route('amounts.create').'"', false)
+        ->assertSee('<a href="'.route('budget-actual-entries.create').'"', false)
         ->assertSee('name="type"', false)
         ->assertSee('name="year"', false)
         ->assertSee('name="month"', false)
         ->assertSee('name="department_id"', false)
-        ->assertSee('name="management_account_id"', false)
+        ->assertSee('name="budget_actual_account_id"', false)
         ->assertSee('name="per_page"', false)
         ->assertSeeText('区分')
         ->assertSeeText('対象年度')
@@ -44,28 +44,28 @@ test('monthly amount index uses the shared action menu', function () {
         ->assertSeeText('削除');
 });
 
-test('monthly amount index supports the selected page size', function (int $perPage) {
+test('budget actual entry index supports the selected page size', function (int $perPage) {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
-    MonthlyAmount::factory()
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
+    BudgetActualEntry::factory()
         ->count($perPage + 1)
         ->create([
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             'period' => '2026-04-01',
         ]);
 
-    $response = $this->actingAs($user)->get(route('amounts.index', [
+    $response = $this->actingAs($user)->get(route('budget-actual-entries.index', [
         'per_page' => $perPage,
     ]));
 
     $response
-        ->assertViewHas('amounts', fn ($amounts): bool => $amounts->perPage() === $perPage
-            && $amounts->count() === $perPage
-            && $amounts->total() === $perPage + 1)
+        ->assertViewHas('budgetActualEntries', fn ($budgetActualEntries): bool => $budgetActualEntries->perPage() === $perPage
+            && $budgetActualEntries->count() === $perPage
+            && $budgetActualEntries->total() === $perPage + 1)
         ->assertViewHas('perPageOptions', [50, 100, 150, 200])
         ->assertSee('value="'.$perPage.'" selected', false);
 })->with([
@@ -75,10 +75,10 @@ test('monthly amount index supports the selected page size', function (int $perP
     '200件' => 200,
 ]);
 
-test('monthly amounts can be filtered by type year and month within the organization', function () {
+test('budget actual entries can be filtered by type year and month within the organization', function () {
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     foreach ([
         ['period' => '2026-04-01', 'type' => 'budget', 'memo' => '2026年4月予算'],
@@ -86,28 +86,28 @@ test('monthly amounts can be filtered by type year and month within the organiza
         ['period' => '2026-05-01', 'type' => 'actual', 'memo' => '2026年5月実績'],
         ['period' => '2027-04-01', 'type' => 'actual', 'memo' => '2027年4月実績'],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             ...$attributes,
         ]);
     }
 
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'period' => '2026-04-01',
         'type' => 'actual',
         'memo' => '他組織の2026年4月実績',
     ]);
 
     $this->actingAs($user)
-        ->get(route('amounts.index', ['type' => 'actual', 'year' => 2026, 'month' => 4]))
+        ->get(route('budget-actual-entries.index', ['type' => 'actual', 'year' => 2026, 'month' => 4]))
         ->assertViewHas('selectedType', 'actual')
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', 4)
         ->assertViewHas('availableYears', [2027, 2026])
         ->assertSee('aria-label="予算・実績の該当件数：1件"', false)
-        ->assertSee('href="'.route('amounts.index', ['reset_filters' => 1]).'"', false)
+        ->assertSee('href="'.route('budget-actual-entries.index', ['reset_filters' => 1]).'"', false)
         ->assertSeeText('2026年4月実績')
         ->assertDontSeeText('2026年4月予算')
         ->assertDontSeeText('2026年5月実績')
@@ -115,7 +115,7 @@ test('monthly amounts can be filtered by type year and month within the organiza
         ->assertDontSeeText('他組織の2026年4月実績');
 });
 
-test('monthly amounts can be filtered by department and management account', function () {
+test('budget actual entries can be filtered by department and budget actual account', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $targetDepartment = Department::factory()->for($user->organization)->create([
@@ -126,11 +126,11 @@ test('monthly amounts can be filtered by department and management account', fun
         'code' => 'D200',
         'name' => '対象外部門',
     ]);
-    $targetManagementAccount = ManagementAccount::factory()->for($user->organization)->create([
+    $targetBudgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create([
         'code' => '4000',
         'name' => '対象科目',
     ]);
-    $otherManagementAccount = ManagementAccount::factory()->for($user->organization)->create([
+    $otherBudgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create([
         'code' => '5000',
         'name' => '対象外科目',
     ]);
@@ -138,21 +138,21 @@ test('monthly amounts can be filtered by department and management account', fun
     foreach ([
         [
             'department_id' => $targetDepartment->id,
-            'management_account_id' => $targetManagementAccount->id,
+            'budget_actual_account_id' => $targetBudgetActualAccount->id,
             'memo' => '部門・科目ともに一致',
         ],
         [
             'department_id' => $otherDepartment->id,
-            'management_account_id' => $targetManagementAccount->id,
+            'budget_actual_account_id' => $targetBudgetActualAccount->id,
             'memo' => '部門が不一致',
         ],
         [
             'department_id' => $targetDepartment->id,
-            'management_account_id' => $otherManagementAccount->id,
+            'budget_actual_account_id' => $otherBudgetActualAccount->id,
             'memo' => '科目が不一致',
         ],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $user->organization_id,
             'period' => '2026-04-01',
             ...$attributes,
@@ -160,38 +160,38 @@ test('monthly amounts can be filtered by department and management account', fun
     }
 
     $this->actingAs($user)
-        ->get(route('amounts.index', [
+        ->get(route('budget-actual-entries.index', [
             'department_id' => $targetDepartment->id,
-            'management_account_id' => $targetManagementAccount->id,
+            'budget_actual_account_id' => $targetBudgetActualAccount->id,
         ]))
         ->assertViewHas('selectedDepartmentId', $targetDepartment->id)
-        ->assertViewHas('selectedManagementAccountId', $targetManagementAccount->id)
+        ->assertViewHas('selectedBudgetActualAccountId', $targetBudgetActualAccount->id)
         ->assertSeeText('部門・科目ともに一致')
         ->assertDontSeeText('部門が不一致')
         ->assertDontSeeText('科目が不一致');
 });
 
-test('monthly amount filter preferences persist after logout and login and remain user specific', function () {
+test('budget actual entry filter preferences persist after logout and login and remain user specific', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
-    $user = User::factory()->create(['login_id' => 'monthly.amount.user']);
+    $user = User::factory()->create(['login_id' => 'budget.actual.entry.user']);
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
-    MonthlyAmount::factory()->create([
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
+    BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2025-04-01',
         'type' => 'actual',
         'memo' => '保存条件の対象予実',
     ]);
-    $otherUser = User::factory()->create(['login_id' => 'other.monthly.amount.user']);
+    $otherUser = User::factory()->create(['login_id' => 'other.budget.actual.entry.user']);
 
-    $this->actingAs($user)->get(route('amounts.index', [
+    $this->actingAs($user)->get(route('budget-actual-entries.index', [
         'type' => 'actual',
         'year' => 2025,
         'month' => 4,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'per_page' => 100,
     ]));
 
@@ -201,68 +201,68 @@ test('monthly amount filter preferences persist after logout and login and remai
         'password' => 'password',
     ])->assertRedirect(route('dashboard', absolute: false));
 
-    $this->get(route('amounts.index'))
+    $this->get(route('budget-actual-entries.index'))
         ->assertViewHas('selectedType', 'actual')
         ->assertViewHas('selectedYear', 2025)
         ->assertViewHas('selectedMonth', 4)
         ->assertViewHas('selectedDepartmentId', $department->id)
-        ->assertViewHas('selectedManagementAccountId', $managementAccount->id)
+        ->assertViewHas('selectedBudgetActualAccountId', $budgetActualAccount->id)
         ->assertViewHas('selectedPerPage', 100)
         ->assertSeeText('保存条件の対象予実');
 
-    $this->actingAs($otherUser)->get(route('amounts.index'))
+    $this->actingAs($otherUser)->get(route('budget-actual-entries.index'))
         ->assertViewHas('selectedType', null)
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedDepartmentId', null)
-        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedBudgetActualAccountId', null)
         ->assertViewHas('selectedPerPage', 50);
 });
 
-test('monthly amount filters can clear remembered preferences', function () {
+test('budget actual entry filters can clear remembered preferences', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
-    MonthlyAmount::factory()->create([
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
+    BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2025-04-01',
     ]);
 
-    $this->actingAs($user)->get(route('amounts.index', [
+    $this->actingAs($user)->get(route('budget-actual-entries.index', [
         'type' => 'budget',
         'year' => 2025,
         'month' => 4,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'per_page' => 100,
     ]));
 
-    $this->get(route('amounts.index', ['reset_filters' => 1]))
+    $this->get(route('budget-actual-entries.index', ['reset_filters' => 1]))
         ->assertViewHas('selectedType', null)
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedDepartmentId', null)
-        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedBudgetActualAccountId', null)
         ->assertViewHas('selectedPerPage', 50);
 
-    $this->get(route('amounts.index'))
+    $this->get(route('budget-actual-entries.index'))
         ->assertViewHas('selectedType', null)
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedDepartmentId', null)
-        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedBudgetActualAccountId', null)
         ->assertViewHas('selectedPerPage', 50);
 });
 
-test('monthly amount index defaults to the current fiscal year based on the company start month', function () {
+test('budget actual entry index defaults to the current fiscal year based on the company start month', function () {
     $this->travelTo(CarbonImmutable::create(2026, 2, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $user->company->update(['fiscal_year_start_month' => 4]);
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     foreach ([
         ['period' => '2025-03-01', 'memo' => '前年度の予実'],
@@ -270,16 +270,16 @@ test('monthly amount index defaults to the current fiscal year based on the comp
         ['period' => '2026-03-01', 'memo' => '当年度終了月の予実'],
         ['period' => '2026-04-01', 'memo' => '翌年度の予実'],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             ...$attributes,
         ]);
     }
 
     $this->actingAs($user)
-        ->get(route('amounts.index'))
+        ->get(route('budget-actual-entries.index'))
         ->assertViewHas('currentFiscalYear', 2025)
         ->assertViewHas('selectedYear', 2025)
         ->assertViewHas('availableYears', [2026, 2025, 2024])
@@ -296,178 +296,178 @@ test('selecting a fiscal year and month maps the month to the correct calendar y
     $user = User::factory()->create();
     $user->company->update(['fiscal_year_start_month' => 4]);
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     foreach ([
         ['period' => '2026-02-01', 'memo' => '2025年度2月の予実'],
         ['period' => '2027-02-01', 'memo' => '2026年度2月の予実'],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             ...$attributes,
         ]);
     }
 
     $this->actingAs($user)
-        ->get(route('amounts.index', ['year' => 2026, 'month' => 2]))
+        ->get(route('budget-actual-entries.index', ['year' => 2026, 'month' => 2]))
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', 2)
         ->assertSeeText('2026年度2月の予実')
         ->assertDontSeeText('2025年度2月の予実');
 });
 
-test('monthly amount index can show records from every fiscal year', function () {
+test('budget actual entry index can show records from every fiscal year', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     foreach ([
         ['period' => '2025-04-01', 'memo' => '2025年度の予実'],
         ['period' => '2026-04-01', 'memo' => '2026年度の予実'],
     ] as $attributes) {
-        MonthlyAmount::factory()->create([
+        BudgetActualEntry::factory()->create([
             'organization_id' => $user->organization_id,
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             ...$attributes,
         ]);
     }
 
     $this->actingAs($user)
-        ->get(route('amounts.index', ['year' => '']))
+        ->get(route('budget-actual-entries.index', ['year' => '']))
         ->assertViewHas('selectedYear', null)
         ->assertViewHas('selectedMonth', null)
         ->assertSeeText('2025年度の予実')
         ->assertSeeText('2026年度の予実');
 });
 
-test('invalid monthly amount filters are ignored', function () {
+test('invalid budget actual entry filters are ignored', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     $otherDepartment = Department::factory()->create([
         'code' => 'OTHER-D',
         'name' => '他組織部門',
     ]);
-    $otherManagementAccount = ManagementAccount::factory()->create([
+    $otherBudgetActualAccount = BudgetActualAccount::factory()->create([
         'code' => 'OTHER-A',
         'name' => '他組織科目',
     ]);
-    MonthlyAmount::factory()->create([
+    BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => Department::factory()->for($user->organization),
-        'management_account_id' => ManagementAccount::factory()->for($user->organization),
+        'budget_actual_account_id' => BudgetActualAccount::factory()->for($user->organization),
         'period' => '2026-04-01',
         'memo' => '表示対象',
     ]);
 
     $this->actingAs($user)
-        ->get(route('amounts.index', [
+        ->get(route('budget-actual-entries.index', [
             'type' => 'forecast',
             'year' => 9999,
             'month' => 13,
             'department_id' => $otherDepartment->id,
-            'management_account_id' => $otherManagementAccount->id,
+            'budget_actual_account_id' => $otherBudgetActualAccount->id,
             'per_page' => 1000,
         ]))
         ->assertViewHas('selectedType', null)
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedDepartmentId', null)
-        ->assertViewHas('selectedManagementAccountId', null)
+        ->assertViewHas('selectedBudgetActualAccountId', null)
         ->assertViewHas('selectedPerPage', 50)
         ->assertSeeText('表示対象')
         ->assertDontSeeText('他組織部門')
         ->assertDontSeeText('他組織科目');
 });
 
-test('users can create multiple monthly amount details for the same dimensions', function () {
+test('users can create multiple budget actual entry details for the same dimensions', function () {
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
 
     $this->actingAs($user)
-        ->get(route('amounts.create'))
+        ->get(route('budget-actual-entries.create'))
         ->assertOk()
         ->assertSee('予算・実績を登録');
 
     foreach (['500000', '300000'] as $amount) {
         $this->actingAs($user)
-            ->post(route('amounts.store'), [
+            ->post(route('budget-actual-entries.store'), [
                 'period' => '2026-04',
                 'department_id' => $department->id,
-                'management_account_id' => $managementAccount->id,
+                'budget_actual_account_id' => $budgetActualAccount->id,
                 'type' => 'budget',
                 'amount' => $amount,
                 'memo' => '外注費',
             ])
-            ->assertRedirect(route('amounts.index'));
+            ->assertRedirect(route('budget-actual-entries.index'));
     }
 
-    $this->assertDatabaseCount('monthly_amounts', 2);
-    $storedAmount = MonthlyAmount::query()
+    $this->assertDatabaseCount('budget_actual_entries', 2);
+    $storedBudgetActualEntry = BudgetActualEntry::query()
         ->where('amount', 500000)
         ->firstOrFail();
 
-    expect($storedAmount->organization_id)->toBe($user->organization_id);
-    expect($storedAmount->period->toDateString())->toBe('2026-04-01');
-    expect($storedAmount->department_id)->toBe($department->id);
-    expect($storedAmount->management_account_id)->toBe($managementAccount->id);
-    expect($storedAmount->type)->toBe('budget');
-    expect($storedAmount->amount)->toBe('500000.00');
-    expect($storedAmount->source)->toBe('manual');
+    expect($storedBudgetActualEntry->organization_id)->toBe($user->organization_id);
+    expect($storedBudgetActualEntry->period->toDateString())->toBe('2026-04-01');
+    expect($storedBudgetActualEntry->department_id)->toBe($department->id);
+    expect($storedBudgetActualEntry->budget_actual_account_id)->toBe($budgetActualAccount->id);
+    expect($storedBudgetActualEntry->type)->toBe('budget');
+    expect($storedBudgetActualEntry->amount)->toBe('500000.00');
+    expect($storedBudgetActualEntry->source)->toBe('manual');
 });
 
 test('users cannot assign masters from another organization', function () {
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $otherManagementAccount = ManagementAccount::factory()->for(Organization::factory())->create();
+    $otherBudgetActualAccount = BudgetActualAccount::factory()->for(Organization::factory())->create();
 
     $this->actingAs($user)
-        ->post(route('amounts.store'), [
+        ->post(route('budget-actual-entries.store'), [
             'period' => '2026-04',
             'department_id' => $department->id,
-            'management_account_id' => $otherManagementAccount->id,
+            'budget_actual_account_id' => $otherBudgetActualAccount->id,
             'type' => 'actual',
             'amount' => '1000',
         ])
-        ->assertSessionHasErrors('management_account_id');
+        ->assertSessionHasErrors('budget_actual_account_id');
 
-    $this->assertDatabaseCount('monthly_amounts', 0);
+    $this->assertDatabaseCount('budget_actual_entries', 0);
 });
 
-test('existing amounts can retain an inactive master when updated', function () {
+test('existing budget actual entries can retain an inactive master when updated', function () {
     $user = User::factory()->create();
     $department = Department::factory()->for($user->organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($user->organization)->create();
-    $amount = MonthlyAmount::factory()->create([
+    $budgetActualAccount = BudgetActualAccount::factory()->for($user->organization)->create();
+    $budgetActualEntry = BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
+        'budget_actual_account_id' => $budgetActualAccount->id,
         'period' => '2026-04-01',
     ]);
     $department->update(['is_active' => false]);
 
     $this->actingAs($user)
-        ->get(route('amounts.edit', $amount))
+        ->get(route('budget-actual-entries.edit', $budgetActualEntry))
         ->assertOk()
         ->assertSee('（無効）');
 
     $this->actingAs($user)
-        ->put(route('amounts.update', $amount), [
+        ->put(route('budget-actual-entries.update', $budgetActualEntry), [
             'period' => '2026-04',
             'department_id' => $department->id,
-            'management_account_id' => $managementAccount->id,
+            'budget_actual_account_id' => $budgetActualAccount->id,
             'type' => 'actual',
             'amount' => '-1200.50',
             'memo' => '調整',
         ])
-        ->assertRedirect(route('amounts.index'));
+        ->assertRedirect(route('budget-actual-entries.index'));
 
-    $this->assertDatabaseHas('monthly_amounts', [
-        'id' => $amount->id,
+    $this->assertDatabaseHas('budget_actual_entries', [
+        'id' => $budgetActualEntry->id,
         'department_id' => $department->id,
         'type' => 'actual',
         'amount' => '-1200.50',
@@ -475,42 +475,42 @@ test('existing amounts can retain an inactive master when updated', function () 
     ]);
 });
 
-test('monthly amounts from another organization return 404', function () {
+test('budget actual entries from another organization return 404', function () {
     $user = User::factory()->create();
-    $otherAmount = MonthlyAmount::factory()->create();
+    $otherBudgetActualEntry = BudgetActualEntry::factory()->create();
 
     $this->actingAs($user)
-        ->get(route('amounts.edit', $otherAmount))
+        ->get(route('budget-actual-entries.edit', $otherBudgetActualEntry))
         ->assertNotFound();
 
     $this->actingAs($user)
-        ->put(route('amounts.update', $otherAmount), [
+        ->put(route('budget-actual-entries.update', $otherBudgetActualEntry), [
             'period' => '2026-04',
             'department_id' => Department::factory()->for($user->organization)->create()->id,
-            'management_account_id' => ManagementAccount::factory()->for($user->organization)->create()->id,
+            'budget_actual_account_id' => BudgetActualAccount::factory()->for($user->organization)->create()->id,
             'type' => 'actual',
             'amount' => '1000',
         ])
         ->assertNotFound();
 
     $this->actingAs($user)
-        ->delete(route('amounts.destroy', $otherAmount))
+        ->delete(route('budget-actual-entries.destroy', $otherBudgetActualEntry))
         ->assertNotFound();
 
-    $this->assertModelExists($otherAmount);
+    $this->assertModelExists($otherBudgetActualEntry);
 });
 
-test('users can delete their monthly amount', function () {
+test('users can delete their budget actual entry', function () {
     $user = User::factory()->create();
-    $amount = MonthlyAmount::factory()->create([
+    $budgetActualEntry = BudgetActualEntry::factory()->create([
         'organization_id' => $user->organization_id,
         'department_id' => Department::factory()->for($user->organization),
-        'management_account_id' => ManagementAccount::factory()->for($user->organization),
+        'budget_actual_account_id' => BudgetActualAccount::factory()->for($user->organization),
     ]);
 
     $this->actingAs($user)
-        ->delete(route('amounts.destroy', $amount))
-        ->assertRedirect(route('amounts.index'));
+        ->delete(route('budget-actual-entries.destroy', $budgetActualEntry))
+        ->assertRedirect(route('budget-actual-entries.index'));
 
-    $this->assertModelMissing($amount);
+    $this->assertModelMissing($budgetActualEntry);
 });
