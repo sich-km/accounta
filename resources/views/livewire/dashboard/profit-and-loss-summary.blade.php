@@ -58,10 +58,10 @@
                             <div data-chart-segment="revenue" class="w-full shrink-0 {{ (float) $profitAndLossChart['profitOrLoss'] >= 0 ? 'rounded-tl-md' : '' }} border border-sky-300 bg-sky-200" style="height: {{ $profitAndLossChart['revenueHeightPercentage'] }}%" aria-hidden="true"></div>
                         </div>
                         <div class="flex h-full flex-col justify-end">
+                            <div data-chart-segment="expenses" class="w-full shrink-0 rounded-tr-md border border-red-300 bg-red-200" style="height: {{ $profitAndLossChart['expenseHeightPercentage'] }}%" aria-hidden="true"></div>
                             @if ((float) $profitAndLossChart['profitOrLoss'] > 0)
-                                <div data-chart-segment="profit" class="w-full shrink-0 rounded-tr-md border border-amber-300 bg-amber-100" style="height: calc({{ $profitAndLossChart['revenueHeightPercentage'] }}% - {{ $profitAndLossChart['expenseHeightPercentage'] }}%)" aria-hidden="true"></div>
+                                <div data-chart-segment="profit" class="w-full shrink-0 border border-amber-300 bg-amber-100" style="height: calc({{ $profitAndLossChart['revenueHeightPercentage'] }}% - {{ $profitAndLossChart['expenseHeightPercentage'] }}%)" aria-hidden="true"></div>
                             @endif
-                            <div data-chart-segment="expenses" class="w-full shrink-0 {{ (float) $profitAndLossChart['profitOrLoss'] <= 0 ? 'rounded-tr-md' : '' }} border border-red-300 bg-red-200" style="height: {{ $profitAndLossChart['expenseHeightPercentage'] }}%" aria-hidden="true"></div>
                         </div>
                     </div>
                     <div class="mx-auto grid max-w-md grid-cols-2 gap-0 px-4 pt-2 text-center text-sm font-semibold text-gray-800 sm:px-10">

@@ -244,6 +244,10 @@ test('dashboard displays the current fiscal year profit and loss summary from jo
         ->assertSee('data-chart-segment="revenue"', false)
         ->assertSee('data-chart-segment="expenses"', false)
         ->assertSee('data-chart-segment="profit"', false)
+        ->assertSeeInOrder([
+            'data-chart-segment="expenses"',
+            'data-chart-segment="profit"',
+        ], false)
         ->assertSee('bg-sky-200', false)
         ->assertSee('bg-red-200', false)
         ->assertSee('bg-amber-100', false)
