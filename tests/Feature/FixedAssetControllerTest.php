@@ -64,7 +64,17 @@ test('users can create and view a fixed asset with normalized input', function (
         ->assertOk()
         ->assertSeeText('98,000.00')
         ->assertSeeText('定額法')
-        ->assertSeeText('保有中');
+        ->assertSeeText('保有中')
+        ->assertSee('href="'.route('fixed-assets.edit', $fixedAsset).'"', false)
+        ->assertSeeText('編集')
+        ->assertSeeText('削除')
+        ->assertSee('id="confirm-fixed-asset-deletion"', false)
+        ->assertSee('action="'.route('fixed-assets.destroy', $fixedAsset).'"', false)
+        ->assertSeeText('キャンセル')
+        ->assertSeeText('削除する')
+        ->assertSee('class="text-sm font-semibold text-gray-700"', false)
+        ->assertSee('class="mt-1 text-base font-medium text-gray-900"', false)
+        ->assertDontSee('return confirm(', false);
 });
 
 test('all user types can manage fixed assets in their organization', function (UserType $userType) {
@@ -264,6 +274,136 @@ test('existing fixed assets can retain an inactive department when updated', fun
     ]);
 });
 
+test('fixed assets can be filtered by acquisition year category department and status', function () {
+    $organization = Organization::factory()->create();
+    $user = User::factory()->for($organization)->create();
+    $targetDepartment = Department::factory()->for($organization)->create([
+        'code' => 'D100',
+        'name' => '対象部門',
+    ]);
+    $otherDepartment = Department::factory()->for($organization)->create([
+        'code' => 'D200',
+        'name' => '別部門',
+    ]);
+    $matchingAsset = FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $targetDepartment->id,
+        'asset_name' => '条件一致資産',
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'software',
+        'status' => 'held',
+    ]);
+    FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $targetDepartment->id,
+        'asset_name' => '取得年度不一致資産',
+        'acquisition_date' => '2024-12-31',
+        'asset_category' => 'software',
+        'status' => 'held',
+    ]);
+    FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $targetDepartment->id,
+        'asset_name' => '資産区分不一致資産',
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'furniture_fixture',
+        'status' => 'held',
+    ]);
+    FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $otherDepartment->id,
+        'asset_name' => '部門不一致資産',
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'software',
+        'status' => 'held',
+    ]);
+    FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $targetDepartment->id,
+        'asset_name' => '状態不一致資産',
+        'acquisition_date' => '2025-06-15',
+        'asset_category' => 'software',
+        'status' => 'sold',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-assets.index', [
+            'acquisition_year' => 2025,
+            'asset_category' => 'software',
+            'department_id' => $targetDepartment->id,
+            'status' => 'held',
+        ]))
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('selectedAssetCategory', 'software')
+        ->assertViewHas('selectedDepartmentId', $targetDepartment->id)
+        ->assertViewHas('selectedStatus', 'held')
+        ->assertSeeText($matchingAsset->asset_name)
+        ->assertDontSeeText('取得年度不一致資産')
+        ->assertDontSeeText('資産区分不一致資産')
+        ->assertDontSeeText('部門不一致資産')
+        ->assertDontSeeText('状態不一致資産')
+        ->assertSee('name="acquisition_year"', false)
+        ->assertSee('name="asset_category"', false)
+        ->assertSee('name="department_id"', false)
+        ->assertSee('name="status"', false)
+        ->assertSeeText('クリア');
+});
+
+test('fixed asset filters ignore unsupported values and departments from another organization', function () {
+    $organization = Organization::factory()->create();
+    $user = User::factory()->for($organization)->create();
+    $department = Department::factory()->for($organization)->create([
+        'name' => '自組織部門',
+    ]);
+    $fixedAsset = FixedAsset::factory()->create([
+        'organization_id' => $organization->id,
+        'department_id' => $department->id,
+        'asset_name' => '自組織資産',
+        'acquisition_date' => '2025-06-15',
+    ]);
+    $foreignDepartment = Department::factory()->create([
+        'name' => '他組織部門',
+    ]);
+    FixedAsset::factory()->create([
+        'organization_id' => $foreignDepartment->organization_id,
+        'department_id' => $foreignDepartment->id,
+        'asset_name' => '他組織資産',
+        'acquisition_date' => '2030-01-01',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-assets.index', [
+            'acquisition_year' => 'invalid',
+            'asset_category' => 'invalid',
+            'department_id' => $foreignDepartment->id,
+            'status' => 'invalid',
+        ]))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedAssetCategory', null)
+        ->assertViewHas('selectedDepartmentId', null)
+        ->assertViewHas('selectedStatus', null)
+        ->assertSeeText($fixedAsset->asset_name)
+        ->assertSeeText('自組織部門')
+        ->assertDontSeeText('他組織資産')
+        ->assertDontSeeText('他組織部門')
+        ->assertDontSeeText('2030年');
+});
+
+test('fixed asset index explains when no assets match active filters', function () {
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create();
+    FixedAsset::factory()->create([
+        'organization_id' => $user->organization_id,
+        'department_id' => $department->id,
+        'asset_category' => 'software',
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('fixed-assets.index', ['asset_category' => 'building']))
+        ->assertSeeText('条件に一致する固定資産がありません。')
+        ->assertDontSeeText('固定資産が登録されていません。');
+});
+
 test('fixed assets from another organization are hidden and return 404', function () {
     $user = User::factory()->create();
     $ownDepartment = Department::factory()->for($user->organization)->create();
@@ -279,11 +419,14 @@ test('fixed assets from another organization are hidden and return 404', functio
         ->assertOk()
         ->assertSeeText($ownAsset->asset_name)
         ->assertDontSeeText($otherAsset->asset_name)
-        ->assertSee('aria-label="操作メニューを開く"', false)
-        ->assertSee('x-teleport="body"', false)
-        ->assertSeeText('詳細')
-        ->assertSeeText('編集')
-        ->assertSeeText('削除');
+        ->assertSee('<a href="'.route('fixed-assets.create').'"', false)
+        ->assertSee('href="'.route('fixed-assets.show', $ownAsset).'"', false)
+        ->assertSee('class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800"', false)
+        ->assertSee('class="min-w-[14rem] max-w-xs break-words px-4 py-4 text-base text-gray-900"', false)
+        ->assertSee('class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900"', false)
+        ->assertDontSeeText('操作')
+        ->assertDontSee('aria-label="操作メニューを開く"', false)
+        ->assertDontSee('x-teleport="body"', false);
 
     $this->actingAs($user)->get(route('fixed-assets.show', $otherAsset))->assertNotFound();
     $this->actingAs($user)->get(route('fixed-assets.edit', $otherAsset))->assertNotFound();

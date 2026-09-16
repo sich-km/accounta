@@ -3,11 +3,14 @@
         <div class="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div>
                 <h2 class="text-xl font-semibold leading-tight text-gray-800">固定資産詳細</h2>
-                <p class="mt-1 text-sm text-gray-500">{{ $fixedAsset->asset_code }} {{ $fixedAsset->asset_name }}</p>
+                <p class="mt-1 text-base text-gray-700">{{ $fixedAsset->asset_code }} {{ $fixedAsset->asset_name }}</p>
             </div>
-            <div class="flex items-center gap-3">
-                <a href="{{ route('fixed-assets.index') }}" class="text-sm text-gray-600 underline hover:text-gray-900">一覧へ戻る</a>
-                <a href="{{ route('fixed-assets.edit', $fixedAsset) }}" class="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">編集</a>
+            <div class="flex flex-wrap items-center gap-2">
+                <x-back-link href="{{ route('fixed-assets.index') }}" class="text-sm">一覧へ戻る</x-back-link>
+                <x-button href="{{ route('fixed-assets.edit', $fixedAsset) }}" class="text-sm">編集</x-button>
+                <x-danger-button type="button" class="text-sm" @click="$dispatch('open-modal', 'confirm-fixed-asset-deletion')">
+                    削除
+                </x-danger-button>
             </div>
         </div>
     </x-slot>
@@ -15,10 +18,10 @@
     <div class="py-8">
         <div class="mx-auto max-w-4xl space-y-4 px-4 sm:px-6 lg:px-8">
             @if (session('status'))
-                <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('status') }}</div>
+                <div class="rounded-md bg-green-50 p-4 text-base font-medium text-green-900">{{ session('status') }}</div>
             @endif
 
-            <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
+            <div class="overflow-hidden border border-gray-200 bg-white shadow-sm sm:rounded-lg">
                 <dl class="grid grid-cols-1 sm:grid-cols-2">
                     @php
                         $details = [
@@ -42,24 +45,42 @@
                     @endphp
                     @foreach ($details as $label => $value)
                         <div class="border-b border-gray-200 px-6 py-4 sm:even:border-l">
-                            <dt class="text-sm font-medium text-gray-500">{{ $label }}</dt>
-                            <dd class="mt-1 text-sm text-gray-900">{{ $value }}</dd>
+                            <dt class="text-sm font-semibold text-gray-700">{{ $label }}</dt>
+                            <dd class="mt-1 text-base font-medium text-gray-900">{{ $value }}</dd>
                         </div>
                     @endforeach
                     <div class="border-b border-gray-200 px-6 py-4 sm:col-span-2">
-                        <dt class="text-sm font-medium text-gray-500">備考</dt>
-                        <dd class="mt-1 whitespace-pre-wrap text-sm text-gray-900">{{ $fixedAsset->notes ?? '未設定' }}</dd>
+                        <dt class="text-sm font-semibold text-gray-700">備考</dt>
+                        <dd class="mt-1 whitespace-pre-wrap text-base text-gray-900">{{ $fixedAsset->notes ?? '未設定' }}</dd>
                     </div>
                 </dl>
             </div>
 
-            <div class="flex justify-end">
-                <form method="POST" action="{{ route('fixed-assets.destroy', $fixedAsset) }}" onsubmit="return confirm('この固定資産を削除しますか？')">
+        </div>
+
+        <x-confirmation-modal id="confirm-fixed-asset-deletion" max-width="md" :standalone="true">
+            <x-slot name="title">固定資産の削除</x-slot>
+
+            <x-slot name="content">
+                <p>
+                    <span class="font-semibold text-gray-900">{{ $fixedAsset->asset_code }} {{ $fixedAsset->asset_name }}</span>
+                    を削除します。この操作は取り消せません。
+                </p>
+            </x-slot>
+
+            <x-slot name="footer">
+                <x-secondary-button type="button" @click="$dispatch('close')">
+                    キャンセル
+                </x-secondary-button>
+
+                <form method="POST" action="{{ route('fixed-assets.destroy', $fixedAsset) }}" class="ms-3">
                     @csrf
                     @method('DELETE')
-                    <x-danger-button type="submit">削除</x-danger-button>
+                    <x-danger-button type="submit">
+                        削除する
+                    </x-danger-button>
                 </form>
-            </div>
-        </div>
+            </x-slot>
+        </x-confirmation-modal>
     </div>
 </x-app-layout>

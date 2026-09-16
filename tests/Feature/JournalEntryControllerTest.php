@@ -7,6 +7,7 @@ use App\Models\JournalEntry;
 use App\Models\LedgerAccount;
 use App\Models\Organization;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -83,33 +84,52 @@ test('journal entry form separates debit and credit input panels', function () {
         ->assertSeeText('明細摘要');
 });
 
-test('journal entry index uses the custom deletion confirmation modal', function () {
+test('journal entry index links entry IDs to details without action controls', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
-    JournalEntry::factory()->for($user->organization)->create();
+    $journalEntry = JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-06-30',
+    ]);
 
     $this->actingAs($user)->get(route('journal-entries.index'))
-        ->assertSee('aria-label="操作メニューを開く"', false)
-        ->assertSee('x-teleport="body"', false)
-        ->assertSee('class="fixed inset-0 z-50"', false)
-        ->assertSee('menuPositioned: false', false)
-        ->assertSee("'visibility: hidden;'", false)
-        ->assertSeeText('詳細')
-        ->assertSeeText('編集')
-        ->assertSeeText('削除')
+        ->assertSee('<a href="'.route('journal-entries.create').'"', false)
+        ->assertSee('shrink-0 items-center justify-center whitespace-nowrap', false)
+        ->assertSeeText('仕訳を登録')
+        ->assertSee('href="'.route('journal-entries.show', $journalEntry).'"', false)
+        ->assertSeeText('#'.$journalEntry->id)
+        ->assertSee('>ID</th>', false)
+        ->assertDontSeeText('仕訳ID')
+        ->assertDontSeeText('操作')
+        ->assertDontSee('aria-label="操作メニューを開く"', false)
+        ->assertDontSee('x-teleport="body"', false)
+        ->assertDontSee('menuPositioned: false', false)
         ->assertDontSee('📎')
-        ->assertSeeText('仕訳の削除')
-        ->assertSeeText('キャンセル')
-        ->assertSeeText('削除する')
-        ->assertSee('id="confirm-journal-entry-deletion"', false)
+        ->assertDontSee('id="confirm-journal-entry-deletion"', false)
+        ->assertViewHas('currentFiscalYear', 2026)
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedSortDirection', 'desc')
+        ->assertSeeText('仕訳日の降順')
+        ->assertSeeText('仕訳日の昇順')
+        ->assertSee('value="desc" selected', false)
+        ->assertSee('class="bg-gray-50"', false)
+        ->assertSee('class="min-w-full divide-y divide-gray-200"', false)
+        ->assertSee('class="divide-y divide-gray-200 bg-white"', false)
+        ->assertSee('class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800"', false)
+        ->assertSee('class="min-w-[16rem] px-4 py-4 text-base text-gray-900"', false)
+        ->assertSee('class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900', false)
+        ->assertSee('class="mt-1 text-base text-gray-700"', false)
+        ->assertDontSee('divide-x', false)
+        ->assertDontSee('hover:bg-sky-50', false)
         ->assertDontSee('return confirm(', false);
 });
 
 test('journal entry index supports the selected page size', function (int $perPage) {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     JournalEntry::factory()
         ->count($perPage + 1)
         ->for($user->organization)
-        ->create();
+        ->create(['entry_date' => '2026-06-30']);
 
     $response = $this->actingAs($user)->get(route('journal-entries.index', [
         'per_page' => $perPage,
@@ -127,6 +147,82 @@ test('journal entry index supports the selected page size', function (int $perPa
     '150件' => 150,
     '200件' => 200,
 ]);
+
+test('journal entry index defaults to the current fiscal year based on the company start month', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 2, 15, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $user->company->update(['fiscal_year_start_month' => 4]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2025-03-31',
+        'description' => '前年度の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2025-04-01',
+        'description' => '当年度開始日の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-03-31',
+        'description' => '当年度終了日の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-04-01',
+        'description' => '翌年度の仕訳',
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.index'))
+        ->assertViewHas('currentFiscalYear', 2025)
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('availableYears', [2026, 2025, 2024])
+        ->assertViewHas('fiscalYearMonths', [4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3])
+        ->assertSeeText('対象年度')
+        ->assertSeeText('2025年度')
+        ->assertSeeText('当年度開始日の仕訳')
+        ->assertSeeText('当年度終了日の仕訳')
+        ->assertDontSeeText('前年度の仕訳')
+        ->assertDontSeeText('翌年度の仕訳');
+});
+
+test('journal entry index maps a selected month to its calendar year within the fiscal year', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 2, 15, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $user->company->update(['fiscal_year_start_month' => 4]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2025-02-10',
+        'description' => '2024年度2月の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-02-10',
+        'description' => '2025年度2月の仕訳',
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.index', [
+        'year' => 2025,
+        'month' => 2,
+    ]))
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('selectedMonth', 2)
+        ->assertSeeText('2025年度2月の仕訳')
+        ->assertDontSeeText('2024年度2月の仕訳');
+});
+
+test('journal entry index can show entries from every fiscal year', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2025-06-30',
+        'description' => '2025年度の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-06-30',
+        'description' => '2026年度の仕訳',
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.index', ['year' => '']))
+        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedMonth', null)
+        ->assertSeeText('2025年度の仕訳')
+        ->assertSeeText('2026年度の仕訳');
+});
 
 test('journal entry index can filter entries by year within the current organization', function () {
     $user = User::factory()->create();
@@ -178,18 +274,91 @@ test('journal entry index can filter entries by year and month within the curren
         'year' => 2026,
         'month' => 1,
         'per_page' => 100,
+        'sort_direction' => 'asc',
     ]))
         ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', 1)
         ->assertViewHas('selectedPerPage', 100)
+        ->assertViewHas('selectedSortDirection', 'asc')
         ->assertSeeText('1月の自組織仕訳')
         ->assertDontSeeText('2月の自組織仕訳')
         ->assertDontSeeText('1月の他組織仕訳')
         ->assertSee('value="2026" selected', false)
-        ->assertSee('value="1" selected', false);
+        ->assertSee('value="1" selected', false)
+        ->assertSee('value="asc" selected', false);
+});
+
+test('journal entry index remembers filter and sort preferences for each user', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $otherUser = User::factory()->create();
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-01-10',
+        'description' => '先の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-01-20',
+        'description' => '後の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-02-01',
+        'description' => '対象外の仕訳',
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.index', [
+        'year' => 2026,
+        'month' => 1,
+        'per_page' => 100,
+        'sort_direction' => 'asc',
+    ]));
+
+    $this->actingAs($otherUser)->get(route('journal-entries.index'))
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', null)
+        ->assertViewHas('selectedPerPage', 50)
+        ->assertViewHas('selectedSortDirection', 'desc');
+
+    $this->actingAs($user)->get(route('journal-entries.index'))
+        ->assertViewHas('selectedYear', 2026)
+        ->assertViewHas('selectedMonth', 1)
+        ->assertViewHas('selectedPerPage', 100)
+        ->assertViewHas('selectedSortDirection', 'asc')
+        ->assertSeeInOrder(['先の仕訳', '後の仕訳'])
+        ->assertDontSeeText('対象外の仕訳');
+});
+
+test('journal entry index clears remembered filter and sort preferences', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 2, 15, 12, 0, 0, 'Asia/Tokyo'));
+    $user = User::factory()->create();
+    $user->company->update(['fiscal_year_start_month' => 4]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2024-04-10',
+        'description' => '前年度の仕訳',
+    ]);
+    JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2025-04-10',
+        'description' => '現在年度の仕訳',
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.index', [
+        'year' => 2024,
+        'month' => 4,
+        'per_page' => 100,
+        'sort_direction' => 'asc',
+    ]));
+
+    $this->get(route('journal-entries.index', ['reset_filters' => 1]))
+        ->assertViewHas('currentFiscalYear', 2025)
+        ->assertViewHas('selectedYear', 2025)
+        ->assertViewHas('selectedMonth', null)
+        ->assertViewHas('selectedPerPage', 50)
+        ->assertViewHas('selectedSortDirection', 'desc')
+        ->assertSeeText('現在年度の仕訳')
+        ->assertDontSeeText('前年度の仕訳');
 });
 
 test('journal entry index falls back to safe defaults for invalid filters', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
     JournalEntry::factory()->for($user->organization)->create([
         'entry_date' => '2026-01-01',
@@ -200,10 +369,12 @@ test('journal entry index falls back to safe defaults for invalid filters', func
         'year' => 2025,
         'month' => 13,
         'per_page' => 1000,
+        'sort_direction' => 'sideways',
     ]))
-        ->assertViewHas('selectedYear', null)
+        ->assertViewHas('selectedYear', 2026)
         ->assertViewHas('selectedMonth', null)
         ->assertViewHas('selectedPerPage', 50)
+        ->assertViewHas('selectedSortDirection', 'desc')
         ->assertSeeText('表示対象の仕訳');
 });
 
@@ -219,7 +390,65 @@ test('journal entry details display the originating department', function () {
 
     $this->actingAs($user)->get(route('journal-entries.show', $journalEntry))
         ->assertSeeText('起票部門')
-        ->assertSeeText('D120 人事部');
+        ->assertSeeText('D120 人事部')
+        ->assertSee('href="'.route('journal-entries.edit', $journalEntry).'"', false)
+        ->assertSeeText('編集')
+        ->assertSeeText('削除')
+        ->assertSee('id="confirm-journal-entry-deletion"', false)
+        ->assertSee('action="'.route('journal-entries.destroy', $journalEntry).'"', false)
+        ->assertSeeText('キャンセル')
+        ->assertSeeText('削除する')
+        ->assertDontSee("onsubmit=\"return confirm('この仕訳と添付済み証憑を削除しますか？')\"", false);
+});
+
+test('journal entry details separate debit and credit lines on wide screens', function () {
+    $user = User::factory()->create();
+    $department = Department::factory()->for($user->organization)->create([
+        'code' => 'D310',
+        'name' => '開発部',
+    ]);
+    $cash = LedgerAccount::factory()->for($user->organization)->create([
+        'code' => '1030',
+        'name' => '普通預金',
+    ]);
+    $sales = LedgerAccount::factory()->for($user->organization)->create([
+        'code' => '4100',
+        'name' => 'サービス売上',
+    ]);
+    $journalEntry = JournalEntry::factory()->for($user->organization)->create();
+    $journalEntry->lines()->createMany([
+        [
+            'organization_id' => $user->organization_id,
+            'line_number' => 1,
+            'ledger_account_id' => $cash->id,
+            'department_id' => null,
+            'side' => 'debit',
+            'amount' => '120000.00',
+            'description' => '売上代金の入金',
+        ],
+        [
+            'organization_id' => $user->organization_id,
+            'line_number' => 2,
+            'ledger_account_id' => $sales->id,
+            'department_id' => $department->id,
+            'side' => 'credit',
+            'amount' => '120000.00',
+            'description' => 'SaaS利用料',
+        ],
+    ]);
+
+    $this->actingAs($user)->get(route('journal-entries.show', $journalEntry))
+        ->assertSee('class="grid grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start"', false)
+        ->assertSeeInOrder(['借方明細', '貸方明細'])
+        ->assertSeeText('1030 普通預金')
+        ->assertSeeText('4100 サービス売上')
+        ->assertSeeText('売上代金の入金')
+        ->assertSeeText('SaaS利用料')
+        ->assertSeeText('D310 開発部')
+        ->assertSeeText('個別部門')
+        ->assertSeeText('明細摘要')
+        ->assertSee('class="text-sm font-semibold text-gray-700">仕訳日', false)
+        ->assertSee('class="mt-1 text-base font-medium text-gray-900"', false);
 });
 
 test('edit form preserves the originating department when journal lines use different departments', function () {
@@ -410,9 +639,16 @@ test('another organization accounts and departments cannot be used in a journal 
 });
 
 test('only current organization journal entries are visible and reachable', function () {
+    $this->travelTo(CarbonImmutable::create(2026, 9, 15, 12, 0, 0, 'Asia/Tokyo'));
     $user = User::factory()->create();
-    $ownEntry = JournalEntry::factory()->for($user->organization)->create(['description' => '自組織仕訳']);
-    $otherEntry = JournalEntry::factory()->create(['description' => '他組織仕訳']);
+    $ownEntry = JournalEntry::factory()->for($user->organization)->create([
+        'entry_date' => '2026-06-30',
+        'description' => '自組織仕訳',
+    ]);
+    $otherEntry = JournalEntry::factory()->create([
+        'entry_date' => '2026-06-30',
+        'description' => '他組織仕訳',
+    ]);
 
     $this->actingAs($user)->get(route('journal-entries.index'))
         ->assertOk()

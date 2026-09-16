@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
 
 class JournalEntryController extends Controller
@@ -21,54 +22,114 @@ class JournalEntryController extends Controller
     /** @var list<int> */
     private const array PER_PAGE_OPTIONS = [50, 100, 150, 200];
 
+    /** @var array<string, string> */
+    private const array SORT_DIRECTION_OPTIONS = [
+        'desc' => '仕訳日の降順',
+        'asc' => '仕訳日の昇順',
+    ];
+
+    private const string DEFAULT_SORT_DIRECTION = 'desc';
+
+    private const string PREFERENCES_CACHE_PREFIX = 'journal-entries:index-preferences:user:';
+
     public function index(Request $request): View
     {
         $organizationId = $request->user()->organization_id;
+        $fiscalYearStartMonth = (int) $request->user()->company()->value('fiscal_year_start_month');
+        $currentFiscalYear = $this->fiscalYearFor(CarbonImmutable::today(), $fiscalYearStartMonth);
         $baseQuery = JournalEntry::query()->forOrganization($organizationId);
         $availableYears = (clone $baseQuery)
             ->select('entry_date')
             ->distinct()
             ->orderByDesc('entry_date')
             ->pluck('entry_date')
-            ->map(fn ($entryDate): int => CarbonImmutable::parse($entryDate)->year)
+            ->map(fn ($entryDate): int => $this->fiscalYearFor(
+                CarbonImmutable::parse($entryDate),
+                $fiscalYearStartMonth,
+            ))
+            ->push($currentFiscalYear)
             ->unique()
+            ->sortDesc()
             ->values()
             ->all();
 
-        $selectedYear = $this->selectedYear($request, $availableYears);
-        $selectedMonth = $this->selectedMonth($request, $selectedYear);
-        $selectedPerPage = $request->integer('per_page');
+        $preferencesCacheKey = self::PREFERENCES_CACHE_PREFIX.$request->user()->getAuthIdentifier();
+        $defaultPreferences = [
+            'year' => $currentFiscalYear,
+            'month' => null,
+            'per_page' => self::PER_PAGE_OPTIONS[0],
+            'sort_direction' => self::DEFAULT_SORT_DIRECTION,
+        ];
 
-        if (! in_array($selectedPerPage, self::PER_PAGE_OPTIONS, true)) {
-            $selectedPerPage = self::PER_PAGE_OPTIONS[0];
+        if ($request->boolean('reset_filters')) {
+            Cache::forget($preferencesCacheKey);
         }
 
-        $periodStart = $selectedYear === null
+        $storedPreferences = Cache::get($preferencesCacheKey, []);
+        $requestedPreferences = match (true) {
+            $request->boolean('reset_filters') => $defaultPreferences,
+            $request->hasAny(['year', 'month', 'per_page', 'sort_direction']) => array_replace(
+                $defaultPreferences,
+                $request->only(['year', 'month', 'per_page', 'sort_direction']),
+            ),
+            is_array($storedPreferences) && $storedPreferences !== [] => array_replace(
+                $defaultPreferences,
+                $storedPreferences,
+            ),
+            default => $defaultPreferences,
+        };
+
+        $selectedYear = $this->selectedYear(
+            $requestedPreferences['year'],
+            $availableYears,
+            $currentFiscalYear,
+        );
+        $selectedMonth = $this->selectedMonth($requestedPreferences['month'] ?? null, $selectedYear);
+        $selectedPerPage = $this->selectedPerPage($requestedPreferences['per_page']);
+        $selectedSortDirection = $this->selectedSortDirection($requestedPreferences['sort_direction']);
+
+        $normalizedPreferences = [
+            'year' => $selectedYear,
+            'month' => $selectedMonth,
+            'per_page' => $selectedPerPage,
+            'sort_direction' => $selectedSortDirection,
+        ];
+
+        if ($storedPreferences !== $normalizedPreferences) {
+            Cache::forever($preferencesCacheKey, $normalizedPreferences);
+        }
+
+        $dateRange = $selectedYear === null
             ? null
-            : CarbonImmutable::create($selectedYear, $selectedMonth ?? 1, 1)->startOfDay();
-        $dateRange = $periodStart === null
-            ? null
-            : [
-                $periodStart->toDateString(),
-                ($selectedMonth === null ? $periodStart->endOfYear() : $periodStart->endOfMonth())->toDateString(),
-            ];
+            : $this->fiscalYearDateRange(
+                $selectedYear,
+                $fiscalYearStartMonth,
+                $selectedMonth,
+            );
 
         $journalEntries = $baseQuery
             ->when($dateRange !== null, fn ($query) => $query->whereBetween('entry_date', $dateRange))
             ->with('lines:id,journal_entry_id,side,amount')
             ->withCount(['lines', 'documents'])
-            ->orderByDesc('entry_date')
-            ->orderByDesc('id')
+            ->orderBy('entry_date', $selectedSortDirection)
+            ->orderBy('id', $selectedSortDirection)
             ->paginate($selectedPerPage)
             ->withQueryString();
 
         return view('journal-entries.index', [
             'journalEntries' => $journalEntries,
             'availableYears' => $availableYears,
+            'currentFiscalYear' => $currentFiscalYear,
+            'fiscalYearMonths' => array_merge(
+                range($fiscalYearStartMonth, 12),
+                $fiscalYearStartMonth === 1 ? [] : range(1, $fiscalYearStartMonth - 1),
+            ),
             'perPageOptions' => self::PER_PAGE_OPTIONS,
+            'sortDirectionOptions' => self::SORT_DIRECTION_OPTIONS,
             'selectedYear' => $selectedYear,
             'selectedMonth' => $selectedMonth,
             'selectedPerPage' => $selectedPerPage,
+            'selectedSortDirection' => $selectedSortDirection,
         ]);
     }
 
@@ -184,23 +245,80 @@ class JournalEntryController extends Controller
     /**
      * @param  list<int>  $availableYears
      */
-    private function selectedYear(Request $request, array $availableYears): ?int
+    private function selectedYear(mixed $value, array $availableYears, int $currentFiscalYear): ?int
     {
-        $selectedYear = $request->integer('year');
+        if ($value === null || $value === '') {
+            return null;
+        }
 
-        return in_array($selectedYear, $availableYears, true) ? $selectedYear : null;
+        $selectedYear = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $selectedYear !== false && in_array($selectedYear, $availableYears, true)
+            ? $selectedYear
+            : $currentFiscalYear;
     }
 
-    private function selectedMonth(Request $request, ?int $selectedYear): ?int
+    private function selectedMonth(mixed $value, ?int $selectedYear): ?int
     {
         if ($selectedYear === null) {
             return null;
         }
 
-        $selectedMonth = $request->integer('month');
+        $selectedMonth = filter_var($value, FILTER_VALIDATE_INT);
 
-        return $selectedMonth >= 1 && $selectedMonth <= 12
+        return $selectedMonth !== false && $selectedMonth >= 1 && $selectedMonth <= 12
             ? $selectedMonth
             : null;
+    }
+
+    private function selectedPerPage(mixed $value): int
+    {
+        $selectedPerPage = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $selectedPerPage !== false && in_array($selectedPerPage, self::PER_PAGE_OPTIONS, true)
+            ? $selectedPerPage
+            : self::PER_PAGE_OPTIONS[0];
+    }
+
+    private function selectedSortDirection(mixed $value): string
+    {
+        return is_string($value) && array_key_exists($value, self::SORT_DIRECTION_OPTIONS)
+            ? $value
+            : self::DEFAULT_SORT_DIRECTION;
+    }
+
+    private function fiscalYearFor(CarbonImmutable $date, int $fiscalYearStartMonth): int
+    {
+        return $date->month >= $fiscalYearStartMonth
+            ? $date->year
+            : $date->year - 1;
+    }
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function fiscalYearDateRange(
+        int $fiscalYear,
+        int $fiscalYearStartMonth,
+        ?int $selectedMonth,
+    ): array {
+        if ($selectedMonth === null) {
+            $periodStart = CarbonImmutable::create($fiscalYear, $fiscalYearStartMonth, 1);
+
+            return [
+                $periodStart->toDateString(),
+                $periodStart->addYear()->subDay()->toDateString(),
+            ];
+        }
+
+        $calendarYear = $selectedMonth >= $fiscalYearStartMonth
+            ? $fiscalYear
+            : $fiscalYear + 1;
+        $periodStart = CarbonImmutable::create($calendarYear, $selectedMonth, 1);
+
+        return [
+            $periodStart->toDateString(),
+            $periodStart->endOfMonth()->toDateString(),
+        ];
     }
 }

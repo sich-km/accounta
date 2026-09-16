@@ -1,9 +1,6 @@
 <?php
 
 use App\Enums\UserType;
-use App\Livewire\Dashboard\BalanceSheetSummary;
-use App\Livewire\Dashboard\BudgetActualSummary;
-use App\Livewire\Dashboard\ProfitAndLossSummary;
 use App\Models\Company;
 use App\Models\Department;
 use App\Models\FixedAsset;
@@ -14,7 +11,6 @@ use App\Models\MonthlyAmount;
 use App\Models\Organization;
 use App\Models\User;
 use Carbon\CarbonImmutable;
-use Livewire\Livewire;
 
 test('dashboard displays statistics for the current organization', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
@@ -100,26 +96,34 @@ test('dashboard displays statistics for the current organization', function () {
         ->assertOk()
         ->assertViewHas('organization', function (Organization $dashboardOrganization) use ($organization): bool {
             return $dashboardOrganization->is($organization)
+                && $dashboardOrganization->current_fiscal_year_budget_records_count === 2
+                && $dashboardOrganization->current_fiscal_year_actual_records_count === 1
                 && $dashboardOrganization->active_departments_count === 1
                 && $dashboardOrganization->active_management_accounts_count === 1
-                && $dashboardOrganization->active_ledger_accounts_count === 1;
+                && $dashboardOrganization->active_ledger_accounts_count === 1
+                && $dashboardOrganization->current_fiscal_year_journal_entries_count === 2;
         })
         ->assertViewHas('fixedAssetSummary', [
             'count' => 2,
             'acquisitionCost' => '200000.00',
             'bookValue' => '148000.00',
         ])
-        ->assertSeeLivewire(ProfitAndLossSummary::class)
-        ->assertSeeLivewire(BalanceSheetSummary::class)
-        ->assertSeeLivewire(BudgetActualSummary::class)
+        ->assertViewHas('profitAndLossChart', [
+            'revenue' => '0.00',
+            'expenses' => '0.00',
+            'profitOrLoss' => '0.00',
+            'revenueHeightPercentage' => '0.00',
+            'expenseHeightPercentage' => '0.00',
+        ])
         ->assertSeeText('テスト株式会社')
-        ->assertSeeInOrder(['P/Lサマリー', 'B/Sサマリー', '固定資産', '予実管理', '管理', '会計学習', 'メニュー'])
-        ->assertSeeText('集計対象仕訳')
-        ->assertSeeText('選択年度の予算レコード')
-        ->assertSeeText('選択年度の実績レコード')
+        ->assertSeeInOrder(['仕訳', 'P/Lサマリー', 'B/Sサマリー', '固定資産', '予実管理', '管理', '会計学習', 'メニュー'])
+        ->assertSeeText('現在年度の予算レコード')
+        ->assertSeeText('現在年度の実績レコード')
         ->assertSeeText('収益・費用比較')
         ->assertSeeText('差額（税引前損益）')
-        ->assertSeeText('2026年度の予実損益')
+        ->assertSeeText('今月予算は未登録です。')
+        ->assertSeeText('今月実績は未登録です。')
+        ->assertSeeText('予算と実績が揃うと表示します。')
         ->assertSeeText('固定資産管理台帳')
         ->assertSeeText('仕訳帳')
         ->assertSeeText('保有中固定資産')
@@ -236,9 +240,33 @@ test('dashboard displays the current fiscal year profit and loss summary from jo
         'amount' => '9999.00',
     ]);
 
-    $component = Livewire::actingAs($user)
-        ->test(ProfitAndLossSummary::class)
-        ->assertSet('fiscalYear', 2026)
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertViewHas('profitAndLossSummary', [
+            'fiscalYear' => 2026,
+            'periodStart' => '2026-04-01',
+            'periodEnd' => '2027-03-31',
+            'operatingRevenue' => '900.00',
+            'operatingExpenses' => '360.00',
+            'operatingProfit' => '540.00',
+            'nonOperatingRevenue' => '100.00',
+            'nonOperatingExpenses' => '20.00',
+            'ordinaryProfit' => '620.00',
+            'extraordinaryIncome' => '50.00',
+            'extraordinaryLoss' => '10.00',
+            'profitBeforeTax' => '660.00',
+            'totalRevenue' => '1050.00',
+            'expensesBeforeTax' => '390.00',
+            'incomeTaxes' => '30.00',
+            'unclassifiedAccountsCount' => 1,
+        ])
+        ->assertViewHas('profitAndLossChart', [
+            'revenue' => '1050.00',
+            'expenses' => '390.00',
+            'profitOrLoss' => '660.00',
+            'revenueHeightPercentage' => '100.00',
+            'expenseHeightPercentage' => '37.14',
+        ])
         ->assertSee('id="journal-profit-chart"', false)
         ->assertSee('data-chart-segment="revenue"', false)
         ->assertSee('data-chart-segment="expenses"', false)
@@ -259,37 +287,6 @@ test('dashboard displays the current fiscal year profit and loss summary from jo
         ->assertSeeText('税引前当期純利益')
         ->assertSeeText('660.00')
         ->assertSeeText('損益区分を判定できない勘定科目が1件あります。');
-
-    expect($component->viewData('profitAndLossSummary'))->toBe([
-        'fiscalYear' => 2026,
-        'periodStart' => '2026-04-01',
-        'periodEnd' => '2027-03-31',
-        'operatingRevenue' => '900.00',
-        'operatingExpenses' => '360.00',
-        'operatingProfit' => '540.00',
-        'nonOperatingRevenue' => '100.00',
-        'nonOperatingExpenses' => '20.00',
-        'ordinaryProfit' => '620.00',
-        'extraordinaryIncome' => '50.00',
-        'extraordinaryLoss' => '10.00',
-        'profitBeforeTax' => '660.00',
-        'totalRevenue' => '1050.00',
-        'expensesBeforeTax' => '390.00',
-        'incomeTaxes' => '30.00',
-        'unclassifiedAccountsCount' => 1,
-    ]);
-    expect($component->viewData('profitAndLossChart'))->toBe([
-        'revenue' => '1050.00',
-        'expenses' => '390.00',
-        'profitOrLoss' => '660.00',
-        'revenueHeightPercentage' => '100.00',
-        'expenseHeightPercentage' => '37.14',
-    ]);
-
-    $component
-        ->set('fiscalYear', 2025)
-        ->assertSet('fiscalYear', 2025)
-        ->assertSeeText('9,999.00');
 });
 
 test('dashboard places a loss above revenue when expenses exceed revenue', function () {
@@ -320,26 +317,24 @@ test('dashboard places a loss above revenue when expenses exceed revenue', funct
         ['organization_id' => $organization->id, 'line_number' => 3, 'ledger_account_id' => $cash->id, 'side' => 'credit', 'amount' => '200.00'],
     ]);
 
-    $component = Livewire::actingAs($user)
-        ->test(ProfitAndLossSummary::class)
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertViewHas('profitAndLossChart', [
+            'revenue' => '400.00',
+            'expenses' => '600.00',
+            'profitOrLoss' => '-200.00',
+            'revenueHeightPercentage' => '66.67',
+            'expenseHeightPercentage' => '100.00',
+        ])
         ->assertSee('data-chart-segment="loss"', false)
         ->assertDontSee('data-chart-segment="profit"', false)
         ->assertSee('style="height: calc(100.00% - 66.67%)"', false)
         ->assertSeeText('費用＋損失');
-
-    expect($component->viewData('profitAndLossChart'))->toBe([
-        'revenue' => '400.00',
-        'expenses' => '600.00',
-        'profitOrLoss' => '-200.00',
-        'revenueHeightPercentage' => '66.67',
-        'expenseHeightPercentage' => '100.00',
-    ]);
 });
 
-test('dashboard compares the selected fiscal year budget and actual profit or loss', function () {
+test('dashboard compares the current month budget and actual profit or loss', function () {
     $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
-    $company = Company::factory()->create(['fiscal_year_start_month' => 4]);
-    $organization = Organization::factory()->for($company)->create();
+    $organization = Organization::factory()->create();
     $user = User::factory()->for($organization)->create();
     $department = Department::factory()->for($organization)->create();
     $revenueAccount = ManagementAccount::factory()->for($organization)->create([
@@ -371,7 +366,7 @@ test('dashboard compares the selected fiscal year budget and actual profit or lo
         'organization_id' => $organization->id,
         'department_id' => $department->id,
         'management_account_id' => $revenueAccount->id,
-        'period' => '2026-03-01',
+        'period' => '2026-08-01',
         'type' => 'actual',
         'amount' => '9999.00',
     ]);
@@ -381,75 +376,32 @@ test('dashboard compares the selected fiscal year budget and actual profit or lo
         'amount' => '9999.00',
     ]);
 
-    $component = Livewire::actingAs($user)
-        ->test(BudgetActualSummary::class)
-        ->assertSet('fiscalYear', 2026)
-        ->assertSee('id="annual-budget-actual-chart"', false)
+    $this->actingAs($user)
+        ->get(route('dashboard'))
+        ->assertViewHas('monthlyBudgetActualSummary', [
+            'monthLabel' => '2026年9月',
+            'budget' => [
+                'records' => 2,
+                'revenue' => '1000.00',
+                'expenses' => '600.00',
+                'profitOrLoss' => '400.00',
+                'heightPercentage' => '100.00',
+            ],
+            'actual' => [
+                'records' => 2,
+                'revenue' => '900.00',
+                'expenses' => '650.00',
+                'profitOrLoss' => '250.00',
+                'heightPercentage' => '62.50',
+            ],
+            'variance' => '-150.00',
+        ])
+        ->assertSee('id="monthly-budget-actual-chart"', false)
         ->assertSee('style="height: 100.00%"', false)
         ->assertSee('style="height: 62.50%"', false)
-        ->assertSeeText('2026年度の予実損益')
+        ->assertSeeText('2026年9月の予実損益')
         ->assertSeeText('予算差異（実績損益−予算損益）')
         ->assertSeeText('-150.00円');
-
-    expect($component->viewData('budgetActualSummary'))->toBe([
-        'periodStart' => '2026-04-01',
-        'periodEnd' => '2027-03-31',
-        'budget' => [
-            'records' => 2,
-            'revenue' => '1000.00',
-            'expenses' => '600.00',
-            'profitOrLoss' => '400.00',
-            'heightPercentage' => '100.00',
-        ],
-        'actual' => [
-            'records' => 2,
-            'revenue' => '900.00',
-            'expenses' => '650.00',
-            'profitOrLoss' => '250.00',
-            'heightPercentage' => '62.50',
-        ],
-        'variance' => '-150.00',
-    ]);
-});
-
-test('dashboard summary components keep their fiscal year selections independent', function () {
-    $this->travelTo(CarbonImmutable::create(2026, 9, 16, 12, 0, 0, 'Asia/Tokyo'));
-    $company = Company::factory()->create(['fiscal_year_start_month' => 4]);
-    $organization = Organization::factory()->for($company)->create();
-    $user = User::factory()->for($organization)->create();
-    $department = Department::factory()->for($organization)->create();
-    $managementAccount = ManagementAccount::factory()->for($organization)->create();
-
-    JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-03-31']);
-    JournalEntry::factory()->for($organization)->create(['entry_date' => '2026-04-01']);
-    MonthlyAmount::factory()->create([
-        'organization_id' => $organization->id,
-        'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
-        'period' => '2026-03-01',
-    ]);
-    MonthlyAmount::factory()->create([
-        'organization_id' => $organization->id,
-        'department_id' => $department->id,
-        'management_account_id' => $managementAccount->id,
-        'period' => '2026-04-01',
-    ]);
-
-    $profitAndLoss = Livewire::actingAs($user)->test(ProfitAndLossSummary::class);
-    $balanceSheet = Livewire::test(BalanceSheetSummary::class);
-    $budgetActual = Livewire::test(BudgetActualSummary::class);
-
-    $profitAndLoss
-        ->set('fiscalYear', 2025)
-        ->assertSet('fiscalYear', 2025);
-
-    $balanceSheet
-        ->assertSet('fiscalYear', 2026)
-        ->set('fiscalYear', 2025)
-        ->assertSet('fiscalYear', 2025)
-        ->assertSeeText('2025年度末（2026/03/31現在）');
-
-    $budgetActual->assertSet('fiscalYear', 2026);
 });
 
 test('the dashboard renders the management section and link for administrators', function (UserType $userType) {

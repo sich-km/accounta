@@ -5,8 +5,10 @@ use App\Enums\UserType;
 use App\Models\Company;
 use App\Models\JournalEntry;
 use App\Models\JournalEntryLine;
+use App\Models\MonthlyAmount;
 use App\Models\User;
 use Database\Seeders\InitialTenantSeeder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Hash;
 
 test('database seeder creates the initial tenant admin and default masters once', function () {
@@ -47,6 +49,12 @@ test('database seeder creates the initial tenant admin and default masters once'
         'organization_id' => $organization->id,
         'code' => '1000',
         'name' => '現金及び預金',
+    ]);
+    $this->assertDatabaseHas('management_accounts', [
+        'organization_id' => $organization->id,
+        'code' => '6060',
+        'name' => '役員報酬',
+        'account_type' => 'expense',
     ]);
     $this->assertDatabaseHas('ledger_accounts', [
         'organization_id' => $organization->id,
@@ -135,6 +143,8 @@ test('database seeder creates the initial tenant admin and default masters once'
         '7410' => '為替差損',
         '7420' => '雑損失',
         '7490' => 'その他の営業外費用',
+        '7500' => '投資有価証券評価損',
+        '7520' => '固定資産売却損',
         '7530' => '固定資産除却損',
         '7540' => '有価証券売却損',
         '7550' => '減損損失',
@@ -166,7 +176,8 @@ test('database seeder creates the initial tenant admin and default masters once'
     $softwareDevelopmentDepartment = $organization->departments()->where('code', 'D310')->firstOrFail();
     $hrDepartment = $organization->departments()->where('code', 'D120')->firstOrFail();
     $domesticSalesDepartment = $organization->departments()->where('code', 'D410')->firstOrFail();
-    $productSales = $organization->managementAccounts()->where('code', '4000')->firstOrFail();
+    $softwareLicenseSales = $organization->managementAccounts()->where('code', '4300')->firstOrFail();
+    $officerCompensation = $organization->managementAccounts()->where('code', '6060')->firstOrFail();
     $salaryJournalEntry = $organization->journalEntries()->whereDate('entry_date', '2026-04-25')->firstOrFail();
     $employeeSalaryAccount = $organization->ledgerAccounts()->where('code', '6000')->firstOrFail();
     $officerCompensationAccount = $organization->ledgerAccounts()->where('code', '6060')->firstOrFail();
@@ -187,19 +198,39 @@ test('database seeder creates the initial tenant admin and default masters once'
 
     $this->assertDatabaseHas('monthly_amounts', [
         'organization_id' => $organization->id,
-        'department_id' => $domesticSalesDepartment->id,
-        'management_account_id' => $productSales->id,
-        'period' => '2026-04-01',
-        'type' => 'budget',
-        'amount' => '8000000.00',
+        'department_id' => $softwareDevelopmentDepartment->id,
+        'management_account_id' => $softwareLicenseSales->id,
+        'period' => '2025-01-01',
+        'type' => 'actual',
+        'amount' => '250000.00',
+        'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
     ]);
     $this->assertDatabaseHas('monthly_amounts', [
         'organization_id' => $organization->id,
-        'department_id' => $domesticSalesDepartment->id,
-        'management_account_id' => $productSales->id,
+        'department_id' => $softwareDevelopmentDepartment->id,
+        'management_account_id' => $softwareLicenseSales->id,
+        'period' => '2026-04-01',
+        'type' => 'budget',
+        'amount' => '390000.00',
+        'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
+    ]);
+    $this->assertDatabaseHas('monthly_amounts', [
+        'organization_id' => $organization->id,
+        'department_id' => $softwareDevelopmentDepartment->id,
+        'management_account_id' => $softwareLicenseSales->id,
         'period' => '2026-04-01',
         'type' => 'actual',
-        'amount' => '8200000.00',
+        'amount' => '400000.00',
+        'memo' => '初期サンプル: 自社SaaSのサブスクリプション売上',
+    ]);
+    $this->assertDatabaseHas('monthly_amounts', [
+        'organization_id' => $organization->id,
+        'department_id' => $managementDepartment->id,
+        'management_account_id' => $officerCompensation->id,
+        'period' => '2027-03-01',
+        'type' => 'budget',
+        'amount' => '250000.00',
+        'memo' => '初期サンプル: 創業者の役員報酬',
     ]);
     foreach ([
         ['FA-DEV-001', '創業者開発用ワークステーション', $softwareDevelopmentDepartment->id, '480000.00'],
@@ -218,10 +249,21 @@ test('database seeder creates the initial tenant admin and default masters once'
             'status' => 'held',
         ]);
     }
-    expect($organization->monthlyAmounts()->count())->toBe(20);
+    expect($organization->monthlyAmounts()->count())->toBe(585);
+    expect($organization->monthlyAmounts()->where('type', 'budget')->count())->toBe(360);
+    expect($organization->monthlyAmounts()->where('type', 'actual')->count())->toBe(225);
+    expect($organization->monthlyAmounts()->where('type', 'actual')->whereDate('period', '>=', '2026-07-01')->exists())->toBeFalse();
     expect($organization->fixedAssets()->count())->toBe(6);
     expect($organization->ledgerAccounts()->count())->toBe(133);
-    expect($organization->journalEntries()->count())->toBe(49);
+    expect($organization->journalEntries()->count())->toBe(147);
+
+    $priorYearJournalEntries = $organization->journalEntries()
+        ->whereBetween('entry_date', ['2025-01-01', '2025-12-31'])
+        ->with('lines.ledgerAccount')
+        ->get();
+    $priorYearJournalEntriesByMonth = $priorYearJournalEntries->groupBy(
+        fn (JournalEntry $journalEntry): int => $journalEntry->entry_date->month,
+    );
 
     $journalEntries = $organization->journalEntries()
         ->whereBetween('entry_date', ['2026-01-01', '2026-06-30'])
@@ -234,8 +276,134 @@ test('database seeder creates the initial tenant admin and default masters once'
     expect($journalEntries->every(
         fn (JournalEntry $journalEntry): bool => $journalEntry->debitTotal() === $journalEntry->creditTotal(),
     ))->toBeTrue();
+    expect($journalEntries->every(
+        fn (JournalEntry $journalEntry): bool => filled($journalEntry->notes),
+    ))->toBeTrue();
+    expect($journalEntries->pluck('notes')->unique()->count())->toBe(51);
+    expect($priorYearJournalEntries)->toHaveCount(96);
+    expect($priorYearJournalEntries->every(
+        fn (JournalEntry $journalEntry): bool => $journalEntry->debitTotal() === $journalEntry->creditTotal(),
+    ))->toBeTrue();
+    expect($priorYearJournalEntries->every(
+        fn (JournalEntry $journalEntry): bool => filled($journalEntry->notes),
+    ))->toBeTrue();
+    expect($organization->journalEntries()->pluck('notes')->unique()->count())->toBe(147);
+    expect($organization->journalEntries()
+        ->where('notes', '小規模SaaS・IT支援・小売業の月次サンプル仕訳')
+        ->exists())->toBeFalse();
+    expect($organization->journalEntries()
+        ->where('description', '4月SaaS・広告収入')
+        ->value('notes'))->toBe('4月分のSaaS利用料と広告収入について、プラットフォームから普通預金への入金を計上。');
+    expect($organization->journalEntries()
+        ->where('description', '4月人件費')
+        ->value('notes'))->toBe('4月分の従業員給与、創業者の役員報酬および法定福利費を普通預金から支払。');
+    expect($organization->journalEntries()
+        ->where('description', '4月営業費用')
+        ->value('notes'))->toBe('4月分のクラウド利用料、事務所家賃、広告宣伝費、決済・振込手数料、消耗品費および開発外注費を普通預金から支払。');
+    $fixedAssetSaleEntry = $organization->journalEntries()
+        ->where('description', '旧ネットワーク機器の売却')
+        ->firstOrFail();
+    $fixedAssetSaleGainAccount = $organization->ledgerAccounts()->where('code', '4300')->firstOrFail();
+    $this->assertDatabaseHas('journal_entry_lines', [
+        'journal_entry_id' => $fixedAssetSaleEntry->id,
+        'ledger_account_id' => $fixedAssetSaleGainAccount->id,
+        'side' => 'credit',
+        'amount' => '20000.00',
+        'description' => '帳簿価額を上回る売却益',
+    ]);
+    $investmentImpairmentEntry = $organization->journalEntries()
+        ->where('description', '投資有価証券の減損処理')
+        ->firstOrFail();
+    $investmentSecuritiesValuationLossAccount = $organization->ledgerAccounts()->where('code', '7500')->firstOrFail();
+    $this->assertDatabaseHas('journal_entry_lines', [
+        'journal_entry_id' => $investmentImpairmentEntry->id,
+        'ledger_account_id' => $investmentSecuritiesValuationLossAccount->id,
+        'side' => 'debit',
+        'amount' => '30000.00',
+        'description' => '減損による投資有価証券評価損',
+    ]);
 
-    foreach ([1 => 305000, 2 => 323000, 3 => 313000, 4 => 319000, 5 => 325000, 6 => 335000] as $month => $expectedProfit) {
+    $monthlyAmounts = $organization->monthlyAmounts()
+        ->with('managementAccount')
+        ->get();
+    $monthlyProfit = fn (string $type): array => $monthlyAmounts
+        ->where('type', $type)
+        ->groupBy(fn (MonthlyAmount $monthlyAmount): string => $monthlyAmount->period->format('Y-m'))
+        ->map(function (Collection $amounts): int {
+            return $amounts->reduce(function (int $profit, MonthlyAmount $monthlyAmount): int {
+                return match ($monthlyAmount->managementAccount->account_type) {
+                    'revenue' => $profit + (int) $monthlyAmount->amount,
+                    'expense' => $profit - (int) $monthlyAmount->amount,
+                    default => $profit,
+                };
+            }, 0);
+        })
+        ->sortKeys()
+        ->all();
+
+    expect($monthlyProfit('budget'))->toBe([
+        '2025-01' => 5000,
+        '2025-02' => 5000,
+        '2025-03' => 5000,
+        '2025-04' => 5000,
+        '2025-05' => 5000,
+        '2025-06' => 10000,
+        '2025-07' => 10000,
+        '2025-08' => 10000,
+        '2025-09' => 10000,
+        '2025-10' => 10000,
+        '2025-11' => 10000,
+        '2025-12' => 15000,
+        '2026-04' => 295000,
+        '2026-05' => 297000,
+        '2026-06' => 309000,
+        '2026-07' => 298000,
+        '2026-08' => 308000,
+        '2026-09' => 331000,
+        '2026-10' => 302000,
+        '2026-11' => 313000,
+        '2026-12' => 316000,
+        '2027-01' => 314000,
+        '2027-02' => 324000,
+        '2027-03' => 333000,
+    ]);
+    expect($monthlyProfit('actual'))->toBe([
+        '2025-01' => 10000,
+        '2025-02' => -20000,
+        '2025-03' => 5000,
+        '2025-04' => 15000,
+        '2025-05' => -10000,
+        '2025-06' => 20000,
+        '2025-07' => 0,
+        '2025-08' => 10000,
+        '2025-09' => 15000,
+        '2025-10' => -5000,
+        '2025-11' => 25000,
+        '2025-12' => 35000,
+        '2026-04' => 319000,
+        '2026-05' => 325000,
+        '2026-06' => 335000,
+    ]);
+
+    $priorYearMonthlyProfits = [1 => 10000, 2 => -20000, 3 => 5000, 4 => 15000, 5 => -10000, 6 => 20000, 7 => 0, 8 => 10000, 9 => 15000, 10 => -5000, 11 => 25000, 12 => 35000];
+
+    foreach ($priorYearMonthlyProfits as $month => $expectedProfit) {
+        $profit = $priorYearJournalEntriesByMonth[$month]
+            ->flatMap(fn (JournalEntry $journalEntry) => $journalEntry->lines)
+            ->reduce(function (int $profit, JournalEntryLine $line): int {
+                return match ($line->ledgerAccount->account_type) {
+                    LedgerAccountType::Revenue => $profit + (int) $line->amount,
+                    LedgerAccountType::Expense => $profit - (int) $line->amount,
+                    default => $profit,
+                };
+            }, 0);
+
+        expect($profit)->toBe($expectedProfit);
+    }
+
+    expect(array_sum($priorYearMonthlyProfits))->toBe(100000);
+
+    foreach ([1 => 305000, 2 => 323000, 3 => 313000, 4 => 319000, 5 => 325000, 6 => 325000] as $month => $expectedProfit) {
         $profit = $journalEntriesByMonth[$month]
             ->flatMap(fn (JournalEntry $journalEntry) => $journalEntry->lines)
             ->reduce(function (int $profit, JournalEntryLine $line): int {

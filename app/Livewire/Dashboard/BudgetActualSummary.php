@@ -1,0 +1,129 @@
+<?php
+
+namespace App\Livewire\Dashboard;
+
+use App\Models\MonthlyAmount;
+use App\Models\Organization;
+use App\Models\User;
+use App\Services\FiscalYearService;
+use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\Auth;
+use Livewire\Component;
+
+class BudgetActualSummary extends Component
+{
+    public int $fiscalYear;
+
+    public function mount(FiscalYearService $fiscalYearService): void
+    {
+        $organization = $this->organization();
+        $this->fiscalYear = $fiscalYearService->current($this->fiscalYearStartMonth($organization));
+    }
+
+    public function render(FiscalYearService $fiscalYearService): View
+    {
+        $organization = $this->organization();
+        $fiscalYearStartMonth = $this->fiscalYearStartMonth($organization);
+        $availableFiscalYears = $fiscalYearService->availableYears(
+            MonthlyAmount::query()
+                ->forOrganization($organization->id)
+                ->distinct()
+                ->pluck('period'),
+            $fiscalYearStartMonth,
+        );
+        $currentFiscalYear = $fiscalYearService->current($fiscalYearStartMonth);
+
+        if (! in_array($this->fiscalYear, $availableFiscalYears, true)) {
+            $this->fiscalYear = $currentFiscalYear;
+        }
+
+        $period = $fiscalYearService->period($this->fiscalYear, $fiscalYearStartMonth);
+        $totals = MonthlyAmount::query()
+            ->forOrganization($organization->id)
+            ->whereBetween('monthly_amounts.period', [
+                $period['start']->toDateString(),
+                $period['end']->toDateString(),
+            ])
+            ->join('management_accounts', 'management_accounts.id', '=', 'monthly_amounts.management_account_id')
+            ->toBase()
+            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'budget' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS budget_expenses")
+            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'revenue' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_revenue")
+            ->selectRaw("COALESCE(SUM(CASE WHEN monthly_amounts.type = 'actual' AND management_accounts.account_type = 'expense' THEN monthly_amounts.amount ELSE 0 END), 0) AS actual_expenses")
+            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'budget' THEN 1 ELSE 0 END) AS budget_records")
+            ->selectRaw("SUM(CASE WHEN monthly_amounts.type = 'actual' THEN 1 ELSE 0 END) AS actual_records")
+            ->first();
+
+        return view('livewire.dashboard.budget-actual-summary', [
+            'availableFiscalYears' => $availableFiscalYears,
+            'budgetActualSummary' => $this->summary($totals, $period['start']->toDateString(), $period['end']->toDateString()),
+        ]);
+    }
+
+    /**
+     * @return array{
+     *     periodStart: string,
+     *     periodEnd: string,
+     *     budget: array{records: int, revenue: string, expenses: string, profitOrLoss: string, heightPercentage: string},
+     *     actual: array{records: int, revenue: string, expenses: string, profitOrLoss: string, heightPercentage: string},
+     *     variance: string|null
+     * }
+     */
+    private function summary(object $totals, string $periodStart, string $periodEnd): array
+    {
+        $budgetRevenue = (float) $totals->budget_revenue;
+        $budgetExpenses = (float) $totals->budget_expenses;
+        $actualRevenue = (float) $totals->actual_revenue;
+        $actualExpenses = (float) $totals->actual_expenses;
+        $budgetProfitOrLoss = $budgetRevenue - $budgetExpenses;
+        $actualProfitOrLoss = $actualRevenue - $actualExpenses;
+        $maximum = max(abs($budgetProfitOrLoss), abs($actualProfitOrLoss));
+        $height = static function (float $amount) use ($maximum): string {
+            if ($maximum <= 0) {
+                return '0.00';
+            }
+
+            return number_format((abs($amount) / $maximum) * 100, 2, '.', '');
+        };
+        $budgetRecords = (int) $totals->budget_records;
+        $actualRecords = (int) $totals->actual_records;
+
+        return [
+            'periodStart' => $periodStart,
+            'periodEnd' => $periodEnd,
+            'budget' => [
+                'records' => $budgetRecords,
+                'revenue' => number_format($budgetRevenue, 2, '.', ''),
+                'expenses' => number_format($budgetExpenses, 2, '.', ''),
+                'profitOrLoss' => number_format($budgetProfitOrLoss, 2, '.', ''),
+                'heightPercentage' => $height($budgetProfitOrLoss),
+            ],
+            'actual' => [
+                'records' => $actualRecords,
+                'revenue' => number_format($actualRevenue, 2, '.', ''),
+                'expenses' => number_format($actualExpenses, 2, '.', ''),
+                'profitOrLoss' => number_format($actualProfitOrLoss, 2, '.', ''),
+                'heightPercentage' => $height($actualProfitOrLoss),
+            ],
+            'variance' => $budgetRecords > 0 && $actualRecords > 0
+                ? number_format($actualProfitOrLoss - $budgetProfitOrLoss, 2, '.', '')
+                : null,
+        ];
+    }
+
+    private function fiscalYearStartMonth(Organization $organization): int
+    {
+        return (int) $organization->company->fiscal_year_start_month;
+    }
+
+    private function organization(): Organization
+    {
+        $user = Auth::user();
+
+        abort_unless($user instanceof User, 401);
+
+        return $user->organization()
+            ->with('company:id,name,fiscal_year_start_month')
+            ->firstOrFail();
+    }
+}

@@ -2,48 +2,161 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <h2 class="text-xl font-semibold leading-tight text-gray-800">予算・実績</h2>
-            <a href="{{ route('amounts.create') }}" class="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">
-                新規登録
-            </a>
+            <x-button href="{{ route('amounts.create') }}" class="text-sm">新規登録</x-button>
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
             @if (session('status'))
-                <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">
+                <div class="rounded-md bg-green-50 p-4 text-base font-medium text-green-900">
                     {{ session('status') }}
                 </div>
             @endif
 
+            <div class="bg-white p-3 shadow-sm sm:rounded-lg">
+                <form
+                    method="GET"
+                    action="{{ route('amounts.index') }}"
+                    class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+                    x-data="{
+                        selectedYear: {{ Js::from($selectedYear === null ? '' : (string) $selectedYear) }},
+                        selectedMonth: {{ Js::from($selectedMonth === null ? '' : (string) $selectedMonth) }},
+                    }"
+                >
+                    <div>
+                        <x-label for="type" value="区分" class="font-semibold text-gray-800" />
+                        <select
+                            id="type"
+                            name="type"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($amountTypes as $type => $typeLabel)
+                                <option value="{{ $type }}" @selected($selectedType === $type)>{{ $typeLabel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="year" value="対象年" class="font-semibold text-gray-800" />
+                        <select
+                            id="year"
+                            name="year"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32"
+                            x-model="selectedYear"
+                            @change="if (selectedYear === '') selectedMonth = ''"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($availableYears as $year)
+                                <option value="{{ $year }}" @selected($selectedYear === $year)>{{ $year }}年</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="month" value="対象月" class="font-semibold text-gray-800" />
+                        <select
+                            id="month"
+                            name="month"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-600 sm:w-28"
+                            x-model="selectedMonth"
+                            x-bind:disabled="selectedYear === ''"
+                        >
+                            <option value="">すべて</option>
+                            @foreach (range(1, 12) as $month)
+                                <option value="{{ $month }}" @selected($selectedMonth === $month)>{{ $month }}月</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="department_id" value="部門" class="font-semibold text-gray-800" />
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-56"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->id }}" @selected($selectedDepartmentId === $department->id)>
+                                    {{ $department->code }} {{ $department->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="management_account_id" value="予実管理科目" class="font-semibold text-gray-800" />
+                        <select
+                            id="management_account_id"
+                            name="management_account_id"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-64"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($managementAccounts as $managementAccount)
+                                <option value="{{ $managementAccount->id }}" @selected($selectedManagementAccountId === $managementAccount->id)>
+                                    {{ $managementAccount->code }} {{ $managementAccount->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="per_page" value="表示件数" class="font-semibold text-gray-800" />
+                        <select
+                            id="per_page"
+                            name="per_page"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32"
+                        >
+                            @foreach ($perPageOptions as $perPageOption)
+                                <option value="{{ $perPageOption }}" @selected($selectedPerPage === $perPageOption)>
+                                    {{ $perPageOption }}件
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <x-button type="submit" class="text-sm">表示</x-button>
+
+                        @if ($selectedType !== null || $selectedYear !== null || $selectedMonth !== null || $selectedDepartmentId !== null || $selectedManagementAccountId !== null || $selectedPerPage !== $perPageOptions[0])
+                            <a href="{{ route('amounts.index') }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
+                                クリア
+                            </a>
+                        @endif
+                    </div>
+                </form>
+            </div>
+
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-200">
+                    <table class="w-full min-w-[64rem] divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">年月</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">部門</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">予実管理科目</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">区分</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">金額</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">メモ</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">操作</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">年月</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">部門</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">予実管理科目</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">区分</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-800">金額</th>
+                                <th scope="col" class="px-4 py-3 text-left text-sm font-semibold text-gray-800">メモ</th>
+                                <th scope="col" class="w-20 whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-800">操作</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
                             @forelse ($amounts as $amount)
                                 <tr>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ $amount->period->format('Y/m') }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">
+                                    <td class="whitespace-nowrap px-4 py-4 text-base font-medium text-gray-900">{{ $amount->period->format('Y/m') }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">
                                         {{ $amount->department->code }} {{ $amount->department->name }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">
                                         {{ $amount->managementAccount->code }} {{ $amount->managementAccount->name }}
                                     </td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ \App\Models\MonthlyAmount::TYPES[$amount->type] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm font-medium text-gray-900">{{ number_format((float) $amount->amount, 2) }}</td>
-                                    <td class="max-w-xs truncate px-4 py-4 text-sm text-gray-700" title="{{ $amount->memo }}">{{ $amount->memo }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm">
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ \App\Models\MonthlyAmount::TYPES[$amount->type] }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $amount->amount, 2) }}</td>
+                                    <td class="max-w-xs truncate px-4 py-4 text-base text-gray-900" title="{{ $amount->memo }}">{{ $amount->memo }}</td>
+                                    <td class="w-20 whitespace-nowrap px-4 py-4 text-right text-base">
                                         <div class="flex justify-end">
                                             <x-dropdown align="right" width="48" :teleport="true">
                                                 <x-slot name="trigger">
@@ -87,7 +200,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-6 py-10 text-center text-sm text-gray-500">予算・実績明細が登録されていません。</td>
+                                    <td colspan="7" class="px-6 py-10 text-center text-base text-gray-700">予算・実績明細が登録されていません。</td>
                                 </tr>
                             @endforelse
                         </tbody>

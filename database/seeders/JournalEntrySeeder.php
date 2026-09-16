@@ -11,7 +11,25 @@ class JournalEntrySeeder extends Seeder
 {
     private const int YEAR = 2026;
 
-    private const string SAMPLE_NOTE = '小規模SaaS・IT支援・小売業の月次サンプル仕訳';
+    private const int PRIOR_YEAR = 2025;
+
+    /**
+     * @var list<array{month: int, saas: int, advertising_revenue: int, development: int, maintenance: int, retail_sales: int, purchases: int, cloud: int, rent: int, marketing: int, payment_fees: int, consumables: int, outsourcing: int}>
+     */
+    private const array PRIOR_YEAR_MONTHLY_AMOUNTS = [
+        ['month' => 1, 'saas' => 250000, 'advertising_revenue' => 40000, 'development' => 300000, 'maintenance' => 90000, 'retail_sales' => 220000, 'purchases' => 132000, 'cloud' => 55000, 'rent' => 60000, 'marketing' => 25000, 'payment_fees' => 12000, 'consumables' => 16000, 'outsourcing' => 70000],
+        ['month' => 2, 'saas' => 255000, 'advertising_revenue' => 40000, 'development' => 280000, 'maintenance' => 90000, 'retail_sales' => 210000, 'purchases' => 126000, 'cloud' => 56000, 'rent' => 60000, 'marketing' => 24000, 'payment_fees' => 12000, 'consumables' => 16000, 'outsourcing' => 81000],
+        ['month' => 3, 'saas' => 260000, 'advertising_revenue' => 42000, 'development' => 310000, 'maintenance' => 92000, 'retail_sales' => 225000, 'purchases' => 135000, 'cloud' => 57000, 'rent' => 60000, 'marketing' => 25000, 'payment_fees' => 13000, 'consumables' => 16000, 'outsourcing' => 98000],
+        ['month' => 4, 'saas' => 265000, 'advertising_revenue' => 42000, 'development' => 320000, 'maintenance' => 94000, 'retail_sales' => 230000, 'purchases' => 138000, 'cloud' => 58000, 'rent' => 60000, 'marketing' => 26000, 'payment_fees' => 13000, 'consumables' => 17000, 'outsourcing' => 104000],
+        ['month' => 5, 'saas' => 270000, 'advertising_revenue' => 43000, 'development' => 290000, 'maintenance' => 95000, 'retail_sales' => 220000, 'purchases' => 132000, 'cloud' => 59000, 'rent' => 60000, 'marketing' => 27000, 'payment_fees' => 13000, 'consumables' => 17000, 'outsourcing' => 100000],
+        ['month' => 6, 'saas' => 275000, 'advertising_revenue' => 44000, 'development' => 330000, 'maintenance' => 96000, 'retail_sales' => 235000, 'purchases' => 141000, 'cloud' => 60000, 'rent' => 60000, 'marketing' => 28000, 'payment_fees' => 14000, 'consumables' => 17000, 'outsourcing' => 120000],
+        ['month' => 7, 'saas' => 280000, 'advertising_revenue' => 45000, 'development' => 300000, 'maintenance' => 98000, 'retail_sales' => 230000, 'purchases' => 138000, 'cloud' => 61000, 'rent' => 60000, 'marketing' => 28000, 'payment_fees' => 14000, 'consumables' => 18000, 'outsourcing' => 114000],
+        ['month' => 8, 'saas' => 285000, 'advertising_revenue' => 46000, 'development' => 340000, 'maintenance' => 100000, 'retail_sales' => 240000, 'purchases' => 144000, 'cloud' => 62000, 'rent' => 60000, 'marketing' => 29000, 'payment_fees' => 14000, 'consumables' => 18000, 'outsourcing' => 154000],
+        ['month' => 9, 'saas' => 290000, 'advertising_revenue' => 47000, 'development' => 350000, 'maintenance' => 102000, 'retail_sales' => 245000, 'purchases' => 147000, 'cloud' => 63000, 'rent' => 60000, 'marketing' => 30000, 'payment_fees' => 15000, 'consumables' => 18000, 'outsourcing' => 166000],
+        ['month' => 10, 'saas' => 295000, 'advertising_revenue' => 48000, 'development' => 320000, 'maintenance' => 104000, 'retail_sales' => 240000, 'purchases' => 144000, 'cloud' => 64000, 'rent' => 60000, 'marketing' => 30000, 'payment_fees' => 15000, 'consumables' => 19000, 'outsourcing' => 160000],
+        ['month' => 11, 'saas' => 300000, 'advertising_revenue' => 50000, 'development' => 360000, 'maintenance' => 105000, 'retail_sales' => 250000, 'purchases' => 150000, 'cloud' => 65000, 'rent' => 60000, 'marketing' => 31000, 'payment_fees' => 16000, 'consumables' => 19000, 'outsourcing' => 179000],
+        ['month' => 12, 'saas' => 310000, 'advertising_revenue' => 52000, 'development' => 390000, 'maintenance' => 108000, 'retail_sales' => 270000, 'purchases' => 162000, 'cloud' => 68000, 'rent' => 60000, 'marketing' => 35000, 'payment_fees' => 17000, 'consumables' => 20000, 'outsourcing' => 213000],
+    ];
 
     /**
      * @var list<array{month: int, saas: int, advertising_revenue: int, development: int, maintenance: int, retail_sales: int, purchases: int, cloud: int, rent: int, marketing: int, payment_fees: int, consumables: int, outsourcing: int}>
@@ -76,30 +94,67 @@ class JournalEntrySeeder extends Seeder
             'entry_date' => self::YEAR.'-01-01',
             'originating_department' => null,
             'description' => '設立時資本金の入金',
-            'notes' => self::SAMPLE_NOTE,
+            'notes' => '会社設立時の運転資金として、創業者から資本金1,000,000円の払込みを受けた。',
             'lines' => [
                 $this->line('debit', '1030', 1000000, null, '普通預金へ入金'),
                 $this->line('credit', '3000', 1000000, null, '設立時資本金'),
             ],
         ]];
 
-        foreach (self::MONTHLY_AMOUNTS as $monthlyAmounts) {
-            array_push($entries, ...$this->monthlyEntries($monthlyAmounts));
+        foreach (self::PRIOR_YEAR_MONTHLY_AMOUNTS as $monthlyAmounts) {
+            array_push($entries, ...$this->monthlyEntries($monthlyAmounts, self::PRIOR_YEAR, true));
         }
 
+        foreach (self::MONTHLY_AMOUNTS as $monthlyAmounts) {
+            array_push($entries, ...$this->monthlyEntries($monthlyAmounts, self::YEAR));
+        }
+
+        array_push($entries, ...$this->extraordinaryEntries());
+
         return $entries;
+    }
+
+    /**
+     * @return list<array{entry_date: string, originating_department: ?string, description: string, notes: string, lines: list<array{side: string, code: string, amount: string, department: ?string, description: string}>}>
+     */
+    private function extraordinaryEntries(): array
+    {
+        return [
+            [
+                'entry_date' => self::YEAR.'-06-18',
+                'originating_department' => 'D130',
+                'description' => '旧ネットワーク機器の売却',
+                'notes' => '更新により不要となった旧ネットワーク機器を帳簿価額80,000円に対して100,000円で売却し、固定資産売却益20,000円を計上。',
+                'lines' => [
+                    $this->line('debit', '1030', 100000, null, '売却代金を普通預金へ入金'),
+                    $this->line('debit', '1531', 120000, 'D130', '売却時点の減価償却累計額を取り崩し'),
+                    $this->line('credit', '1530', 200000, 'D130', '旧ネットワーク機器の取得価額を除却'),
+                    $this->line('credit', '4300', 20000, 'D130', '帳簿価額を上回る売却益'),
+                ],
+            ],
+            [
+                'entry_date' => self::YEAR.'-06-28',
+                'originating_department' => 'D110',
+                'description' => '投資有価証券の減損処理',
+                'notes' => '保有する投資有価証券について実質価額が著しく下落したため、減損による評価損30,000円を特別損失として計上。',
+                'lines' => [
+                    $this->line('debit', '7500', 30000, 'D110', '減損による投資有価証券評価損'),
+                    $this->line('credit', '1710', 30000, null, '投資有価証券の帳簿価額を減額'),
+                ],
+            ],
+        ];
     }
 
     /**
      * @param  array{month: int, saas: int, advertising_revenue: int, development: int, maintenance: int, retail_sales: int, purchases: int, cloud: int, rent: int, marketing: int, payment_fees: int, consumables: int, outsourcing: int}  $amounts
      * @return list<array{entry_date: string, originating_department: ?string, description: string, notes: string, lines: list<array{side: string, code: string, amount: string, department: ?string, description: string}>}>
      */
-    private function monthlyEntries(array $amounts): array
+    private function monthlyEntries(array $amounts, int $year, bool $includeYearInLabel = false): array
     {
         $month = $amounts['month'];
-        $monthLabel = "{$month}月";
-        $period = CarbonImmutable::create(self::YEAR, $month, 1);
-        $date = fn (int $day): string => sprintf('%d-%02d-%02d', self::YEAR, $month, $day);
+        $monthLabel = $includeYearInLabel ? "{$year}年{$month}月" : "{$month}月";
+        $period = CarbonImmutable::create($year, $month, 1);
+        $date = fn (int $day): string => sprintf('%d-%02d-%02d', $year, $month, $day);
         $saasAndAdvertisingTotal = $amounts['saas'] + $amounts['advertising_revenue'];
         $itRevenueTotal = $amounts['development'] + $amounts['maintenance'];
         $personnelTotal = 200000 + 250000 + 70000;
@@ -128,7 +183,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(5),
                 'originating_department' => 'D310',
                 'description' => "{$monthLabel}SaaS・広告収入",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}分のSaaS利用料と広告収入について、プラットフォームから普通預金への入金を計上。",
                 'lines' => [
                     $this->line('debit', '1030', $saasAndAdvertisingTotal, null, 'プラットフォームから普通預金へ入金'),
                     $this->line('credit', '4100', $amounts['saas'], 'D310', "{$monthLabel}SaaSサブスクリプション売上"),
@@ -139,7 +194,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(10),
                 'originating_department' => 'D410',
                 'description' => "{$monthLabel}商品A仕入",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}販売分の商品Aを仕入れ、代金を後日支払う買掛金として計上。",
                 'lines' => [
                     $this->line('debit', '5100', $amounts['purchases'], 'D410', "{$monthLabel}商品A仕入"),
                     $this->line('credit', '2000', $amounts['purchases'], null, '仕入先への買掛金計上'),
@@ -149,7 +204,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(15),
                 'originating_department' => 'D410',
                 'description' => "{$monthLabel}商品A売上",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}の商品A販売代金について、普通預金への入金と売上を計上。",
                 'lines' => [
                     $this->line('debit', '1030', $amounts['retail_sales'], null, '商品A販売代金の入金'),
                     $this->line('credit', '4000', $amounts['retail_sales'], 'D410', "{$monthLabel}商品A売上"),
@@ -159,7 +214,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(20),
                 'originating_department' => 'D310',
                 'description' => "{$monthLabel}IT開発・保守売上",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}に提供した受託システム開発と保守サービスの請求額を、売掛金として計上。",
                 'lines' => [
                     $this->line('debit', '1100', $itRevenueTotal, null, '顧客への請求額'),
                     $this->line('credit', '4110', $amounts['development'], 'D310', "{$monthLabel}受託システム開発売上"),
@@ -170,7 +225,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(22),
                 'originating_department' => 'D110',
                 'description' => "{$monthLabel}商品A仕入代金の支払",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}の商品A仕入時に計上した買掛金を、普通預金から支払って決済。",
                 'lines' => [
                     $this->line('debit', '2000', $amounts['purchases'], null, '買掛金の決済'),
                     $this->line('credit', '1030', $amounts['purchases'], null, '普通預金から支払'),
@@ -180,7 +235,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(25),
                 'originating_department' => 'D120',
                 'description' => "{$monthLabel}人件費",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}分の従業員給与、創業者の役員報酬および法定福利費を普通預金から支払。",
                 'lines' => [
                     $this->line('debit', '6000', 200000, 'D120', "{$monthLabel}従業員給与（1名）"),
                     $this->line('debit', '6060', 250000, 'D100', "{$monthLabel}創業者役員報酬"),
@@ -192,7 +247,7 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $date(27),
                 'originating_department' => 'D110',
                 'description' => "{$monthLabel}IT売掛金の回収",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}に請求した受託システム開発・保守サービスの売掛金を、普通預金で回収。",
                 'lines' => [
                     $this->line('debit', '1030', $itRevenueTotal, null, '普通預金へ入金'),
                     $this->line('credit', '1100', $itRevenueTotal, null, 'IT開発・保守売掛金の回収'),
@@ -202,7 +257,9 @@ class JournalEntrySeeder extends Seeder
                 'entry_date' => $period->endOfMonth()->toDateString(),
                 'originating_department' => 'D110',
                 'description' => "{$monthLabel}営業費用",
-                'notes' => self::SAMPLE_NOTE,
+                'notes' => "{$monthLabel}分のクラウド利用料、事務所家賃、広告宣伝費、決済・振込手数料、消耗品費"
+                    .($amounts['outsourcing'] > 0 ? 'および開発外注費' : '')
+                    .'を普通預金から支払。',
                 'lines' => $operatingExpenseLines,
             ],
         ];
@@ -238,7 +295,6 @@ class JournalEntrySeeder extends Seeder
                 ->update([
                     'entry_date' => $legacyEntry['new_entry_date'],
                     'description' => $legacyEntry['new_description'],
-                    'notes' => self::SAMPLE_NOTE,
                 ]);
         }
     }

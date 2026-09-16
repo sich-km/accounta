@@ -14,14 +14,17 @@
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                    <x-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
+                        ダッシュボード
+                    </x-nav-link>
                     <x-nav-link href="{{ route('journal-entries.index') }}" :active="request()->routeIs('journal-entries.*')">
-                        仕訳帳
+                        仕訳
                     </x-nav-link>
                     <x-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
-                        固定資産管理台帳
+                        固定資産
                     </x-nav-link>
                     <x-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
-                        予算・実績
+                        予実管理
                     </x-nav-link>
 
                     @if (Auth::user()->canManageMasters())
@@ -153,14 +156,17 @@
     <!-- Responsive Navigation Menu -->
     <div :class="{'block': open, 'hidden': ! open}" class="hidden sm:hidden">
         <div class="pt-2 pb-3 space-y-1">
+            <x-responsive-nav-link href="{{ route('dashboard') }}" :active="request()->routeIs('dashboard')">
+                ダッシュボード
+            </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('journal-entries.index') }}" :active="request()->routeIs('journal-entries.*')">
-                仕訳帳
+                仕訳
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('fixed-assets.index') }}" :active="request()->routeIs('fixed-assets.*')">
-                固定資産管理台帳
+                固定資産
             </x-responsive-nav-link>
             <x-responsive-nav-link href="{{ route('amounts.index') }}" :active="request()->routeIs('amounts.*')">
-                予算・実績
+                予実管理
             </x-responsive-nav-link>
 
             @if (Auth::user()->canManageMasters())

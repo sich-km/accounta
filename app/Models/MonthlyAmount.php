@@ -39,7 +39,7 @@ class MonthlyAmount extends Model
      */
     public function scopeForOrganization(Builder $query, int $organizationId): Builder
     {
-        return $query->where('organization_id', $organizationId);
+        return $query->where($this->qualifyColumn('organization_id'), $organizationId);
     }
 
     public function organization(): BelongsTo

@@ -2,99 +2,133 @@
     <x-slot name="header">
         <div class="flex items-center justify-between gap-4">
             <h2 class="text-xl font-semibold leading-tight text-gray-800">固定資産管理台帳</h2>
-            <a href="{{ route('fixed-assets.create') }}" class="rounded-md bg-gray-800 px-4 py-2 text-xs font-semibold uppercase tracking-widest text-white hover:bg-gray-700">
-                新規登録
-            </a>
+            <x-button href="{{ route('fixed-assets.create') }}" class="text-sm">新規登録</x-button>
         </div>
     </x-slot>
 
     <div class="py-8">
         <div class="mx-auto max-w-7xl space-y-4 px-4 sm:px-6 lg:px-8">
             @if (session('status'))
-                <div class="rounded-md bg-green-50 p-4 text-sm text-green-800">{{ session('status') }}</div>
+                <div class="rounded-md bg-green-50 p-4 text-base font-medium text-green-900">{{ session('status') }}</div>
             @endif
+
+            <div class="bg-white p-3 shadow-sm sm:rounded-lg">
+                <form
+                    method="GET"
+                    action="{{ route('fixed-assets.index') }}"
+                    class="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end"
+                >
+                    <div>
+                        <x-label for="acquisition_year" value="取得年度" class="font-semibold text-gray-800" />
+                        <select
+                            id="acquisition_year"
+                            name="acquisition_year"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-32"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($availableYears as $year)
+                                <option value="{{ $year }}" @selected($selectedYear === $year)>{{ $year }}年</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="asset_category" value="資産区分" class="font-semibold text-gray-800" />
+                        <select
+                            id="asset_category"
+                            name="asset_category"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-56"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($assetCategories as $assetCategory => $assetCategoryLabel)
+                                <option value="{{ $assetCategory }}" @selected($selectedAssetCategory === $assetCategory)>
+                                    {{ $assetCategoryLabel }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="department_id" value="部門" class="font-semibold text-gray-800" />
+                        <select
+                            id="department_id"
+                            name="department_id"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-56"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($departments as $department)
+                                <option value="{{ $department->id }}" @selected($selectedDepartmentId === $department->id)>
+                                    {{ $department->code }} {{ $department->name }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div>
+                        <x-label for="status" value="状態" class="font-semibold text-gray-800" />
+                        <select
+                            id="status"
+                            name="status"
+                            class="mt-1 block w-full rounded-md border-gray-400 py-2 text-base text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:w-36"
+                        >
+                            <option value="">すべて</option>
+                            @foreach ($statuses as $status => $statusLabel)
+                                <option value="{{ $status }}" @selected($selectedStatus === $status)>{{ $statusLabel }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <x-button type="submit" class="text-sm">表示</x-button>
+
+                        @if ($hasActiveFilters)
+                            <a href="{{ route('fixed-assets.index') }}" class="inline-flex items-center px-3 py-2 text-base font-medium text-gray-700 hover:text-gray-900">
+                                クリア
+                            </a>
+                        @endif
+                    </div>
+                </form>
+            </div>
 
             <div class="overflow-hidden bg-white shadow-sm sm:rounded-lg">
                 <div class="overflow-x-auto">
-                    <table class="min-w-[80rem] divide-y divide-gray-200">
+                    <table class="w-full min-w-[72rem] divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">資産コード</th>
-                                <th class="min-w-[14rem] px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">資産名</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">資産区分</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">部門</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">取得価額</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">減価償却累計額</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">帳簿価額</th>
-                                <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider text-gray-500">状態</th>
-                                <th class="px-4 py-3 text-right text-xs font-medium uppercase tracking-wider text-gray-500">操作</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">資産コード</th>
+                                <th scope="col" class="min-w-[14rem] px-4 py-3 text-left text-sm font-semibold text-gray-800">資産名</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">資産区分</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">部門</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-800">取得価額</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-800">減価償却累計額</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-right text-sm font-semibold text-gray-800">帳簿価額</th>
+                                <th scope="col" class="whitespace-nowrap px-4 py-3 text-left text-sm font-semibold text-gray-800">状態</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 bg-white">
                             @forelse ($fixedAssets as $fixedAsset)
                                 <tr>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm font-medium text-gray-900">{{ $fixedAsset->asset_code }}</td>
-                                    <td class="min-w-[14rem] max-w-xs break-words px-4 py-4 text-sm text-gray-700">{{ $fixedAsset->asset_name }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ $fixedAsset->assetCategoryLabel() }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ $fixedAsset->department->code }} {{ $fixedAsset->department->name }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm text-gray-700">{{ number_format((float) $fixedAsset->acquisition_cost, 2) }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm text-gray-700">{{ number_format((float) $fixedAsset->accumulated_depreciation, 2) }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm font-medium text-gray-900">{{ number_format((float) $fixedAsset->bookValue(), 2) }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-sm text-gray-700">{{ \App\Models\FixedAsset::STATUSES[$fixedAsset->status] }}</td>
-                                    <td class="whitespace-nowrap px-4 py-4 text-right text-sm">
-                                        <div class="flex justify-end">
-                                            <x-dropdown align="right" width="48" :teleport="true">
-                                                <x-slot name="trigger">
-                                                    <x-icon-button label="操作メニューを開く" aria-haspopup="menu" x-bind:aria-expanded="open.toString()">
-                                                        <svg class="size-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                                            <circle cx="12" cy="5" r="1.5" />
-                                                            <circle cx="12" cy="12" r="1.5" />
-                                                            <circle cx="12" cy="19" r="1.5" />
-                                                        </svg>
-                                                    </x-icon-button>
-                                                </x-slot>
-
-                                                <x-slot name="content">
-                                                    <div role="menu">
-                                                        <x-dropdown-link href="{{ route('fixed-assets.show', $fixedAsset) }}" role="menuitem">
-                                                            <span class="flex items-center gap-2">
-                                                                <svg class="size-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12s3.75-6.75 9.75-6.75S21.75 12 21.75 12 18 18.75 12 18.75 2.25 12 2.25 12Z" />
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                                                </svg>
-                                                                <span>詳細</span>
-                                                            </span>
-                                                        </x-dropdown-link>
-                                                        <x-dropdown-link href="{{ route('fixed-assets.edit', $fixedAsset) }}" role="menuitem">
-                                                            <span class="flex items-center gap-2">
-                                                                <svg class="size-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.862 4.487Z" />
-                                                                    <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 7.125 16.875 4.5M18 14.25v4.125A2.625 2.625 0 0 1 15.375 21H5.625A2.625 2.625 0 0 1 3 18.375V8.625A2.625 2.625 0 0 1 5.625 6H9.75" />
-                                                                </svg>
-                                                                <span>編集</span>
-                                                            </span>
-                                                        </x-dropdown-link>
-                                                        <form method="POST" action="{{ route('fixed-assets.destroy', $fixedAsset) }}" onsubmit="return confirm('この固定資産を削除しますか？')">
-                                                            @csrf
-                                                            @method('DELETE')
-                                                            <x-dropdown-button type="submit" role="menuitem">
-                                                                <span class="flex items-center gap-2">
-                                                                    <svg class="size-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
-                                                                        <path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673A2.25 2.25 0 0 1 15.916 21H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0V4.477c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
-                                                                    </svg>
-                                                                    <span>削除</span>
-                                                                </span>
-                                                            </x-dropdown-button>
-                                                        </form>
-                                                    </div>
-                                                </x-slot>
-                                            </x-dropdown>
-                                        </div>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base">
+                                        <a
+                                            href="{{ route('fixed-assets.show', $fixedAsset) }}"
+                                            class="font-semibold text-sky-700 hover:text-sky-900"
+                                        >
+                                            {{ $fixedAsset->asset_code }}
+                                        </a>
                                     </td>
+                                    <td class="min-w-[14rem] max-w-xs break-words px-4 py-4 text-base text-gray-900">{{ $fixedAsset->asset_name }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ $fixedAsset->assetCategoryLabel() }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ $fixedAsset->department->code }} {{ $fixedAsset->department->name }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $fixedAsset->acquisition_cost, 2) }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $fixedAsset->accumulated_depreciation, 2) }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-right text-base font-semibold text-gray-900">{{ number_format((float) $fixedAsset->bookValue(), 2) }}</td>
+                                    <td class="whitespace-nowrap px-4 py-4 text-base text-gray-900">{{ \App\Models\FixedAsset::STATUSES[$fixedAsset->status] }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="9" class="px-6 py-10 text-center text-sm text-gray-500">固定資産が登録されていません。</td>
+                                    <td colspan="8" class="px-6 py-10 text-center text-base text-gray-700">
+                                        {{ $hasActiveFilters ? '条件に一致する固定資産がありません。' : '固定資産が登録されていません。' }}
+                                    </td>
                                 </tr>
                             @endforelse
                         </tbody>

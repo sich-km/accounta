@@ -6,6 +6,8 @@ use App\Http\Requests\StoreFixedAssetRequest;
 use App\Http\Requests\UpdateFixedAssetRequest;
 use App\Models\Department;
 use App\Models\FixedAsset;
+use Carbon\CarbonImmutable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -15,14 +17,57 @@ class FixedAssetController extends Controller
 {
     public function index(Request $request): View
     {
-        $fixedAssets = FixedAsset::query()
-            ->forOrganization($request->user()->organization_id)
+        $organizationId = $request->user()->organization_id;
+        $baseQuery = FixedAsset::query()->forOrganization($organizationId);
+        $availableYears = (clone $baseQuery)
+            ->select('acquisition_date')
+            ->distinct()
+            ->orderByDesc('acquisition_date')
+            ->pluck('acquisition_date')
+            ->map(fn (mixed $acquisitionDate): int => CarbonImmutable::parse($acquisitionDate)->year)
+            ->unique()
+            ->values()
+            ->all();
+        $departments = Department::query()
+            ->forOrganization($organizationId)
+            ->orderBy('code')
+            ->get(['id', 'code', 'name']);
+        $selectedYear = $this->selectedInteger($request->query('acquisition_year'), $availableYears);
+        $selectedAssetCategory = $this->selectedKey($request->query('asset_category'), FixedAsset::ASSET_CATEGORIES);
+        $selectedDepartmentId = $this->selectedInteger($request->query('department_id'), $departments->modelKeys());
+        $selectedStatus = $this->selectedKey($request->query('status'), FixedAsset::STATUSES);
+
+        $fixedAssets = $baseQuery
+            ->when($selectedYear !== null, fn (Builder $query): Builder => $query->whereBetween('acquisition_date', [
+                sprintf('%d-01-01', $selectedYear),
+                sprintf('%d-12-31', $selectedYear),
+            ]))
+            ->when($selectedAssetCategory !== null, fn (Builder $query): Builder => $query->where('asset_category', $selectedAssetCategory))
+            ->when($selectedDepartmentId !== null, fn (Builder $query): Builder => $query->where('department_id', $selectedDepartmentId))
+            ->when($selectedStatus !== null, fn (Builder $query): Builder => $query->where('status', $selectedStatus))
             ->with('department')
             ->orderBy('asset_code')
             ->orderBy('id')
-            ->paginate(20);
+            ->paginate(20)
+            ->withQueryString();
 
-        return view('fixed-assets.index', compact('fixedAssets'));
+        return view('fixed-assets.index', [
+            'fixedAssets' => $fixedAssets,
+            'availableYears' => $availableYears,
+            'assetCategories' => FixedAsset::ASSET_CATEGORIES,
+            'departments' => $departments,
+            'statuses' => FixedAsset::STATUSES,
+            'selectedYear' => $selectedYear,
+            'selectedAssetCategory' => $selectedAssetCategory,
+            'selectedDepartmentId' => $selectedDepartmentId,
+            'selectedStatus' => $selectedStatus,
+            'hasActiveFilters' => collect([
+                $selectedYear,
+                $selectedAssetCategory,
+                $selectedDepartmentId,
+                $selectedStatus,
+            ])->contains(fn (mixed $value): bool => $value !== null),
+        ]);
     }
 
     public function create(Request $request): View
@@ -108,5 +153,27 @@ class FixedAssetController extends Controller
         return FixedAsset::query()
             ->forOrganization($request->user()->organization_id)
             ->findOrFail($fixedAssetId);
+    }
+
+    /**
+     * @param  list<int>  $allowedValues
+     */
+    private function selectedInteger(mixed $value, array $allowedValues): ?int
+    {
+        $selectedValue = filter_var($value, FILTER_VALIDATE_INT);
+
+        return $selectedValue !== false && in_array($selectedValue, $allowedValues, true)
+            ? $selectedValue
+            : null;
+    }
+
+    /**
+     * @param  array<string, string>  $options
+     */
+    private function selectedKey(mixed $value, array $options): ?string
+    {
+        return is_string($value) && array_key_exists($value, $options)
+            ? $value
+            : null;
     }
 }

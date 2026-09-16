@@ -28,16 +28,14 @@ Route::middleware([
     Route::get('/dashboard', function () {
         $organization = request()->user()
             ->organization()
-            ->with('company:id,name')
-            ->withCount([
-                'monthlyAmounts as budget_records_count' => fn (Builder $query): Builder => $query->where('type', 'budget'),
-                'monthlyAmounts as actual_records_count' => fn (Builder $query): Builder => $query->where('type', 'actual'),
-                'departments as active_departments_count' => fn (Builder $query): Builder => $query->where('is_active', true),
-                'managementAccounts as active_management_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
-                'ledgerAccounts as active_ledger_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
-                'journalEntries as journal_entries_count',
-            ])
+            ->with('company:id,name,fiscal_year_start_month')
             ->firstOrFail();
+
+        $organization->loadCount([
+            'departments as active_departments_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+            'managementAccounts as active_management_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+            'ledgerAccounts as active_ledger_accounts_count' => fn (Builder $query): Builder => $query->where('is_active', true),
+        ]);
 
         $summary = FixedAsset::query()
             ->forOrganization($organization->id)

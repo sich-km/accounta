@@ -58,6 +58,7 @@ class ManagementAccountSeeder extends Seeder
         ['code' => '6010', 'name' => '賞与', 'account_type' => 'expense'],
         ['code' => '6020', 'name' => '法定福利費', 'account_type' => 'expense'],
         ['code' => '6030', 'name' => '福利厚生費', 'account_type' => 'expense'],
+        ['code' => '6060', 'name' => '役員報酬', 'account_type' => 'expense'],
 
         ['code' => '6100', 'name' => '外注費', 'account_type' => 'expense'],
         ['code' => '6110', 'name' => '業務委託費', 'account_type' => 'expense'],
