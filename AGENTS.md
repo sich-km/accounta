@@ -15,7 +15,7 @@ Before relying on a package's API, confirm its installed version:
 
 ## Skills Activation
 
-This project has domain-specific skills available in `.agents/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
+This project has domain-specific skills available in `**/skills/**`. You MUST activate the relevant skill whenever you work in that domain—don't wait until you're stuck.
 
 ## Conventions
 
