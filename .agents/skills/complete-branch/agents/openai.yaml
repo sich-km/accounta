@@ -1,0 +1,4 @@
+interface:
+  display_name: "Accounta Complete Branch"
+  short_description: "Review, commit, push and create a PR into main"
+  default_prompt: "$complete-branch feature-v0.5"

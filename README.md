@@ -7,6 +7,11 @@
 <a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
 </p>
 
+## Accounta ドキュメント
+
+- [Accounta サービス構想](docs/Accounta_%E3%82%B5%E3%83%BC%E3%83%93%E3%82%B9%E6%A7%8B%E6%83%B3.md)
+- [Accounta 機能構想](docs/Accounta_%E6%A9%9F%E8%83%BD%E6%A7%8B%E6%83%B3.md)
+
 ## About Laravel
 
 Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:

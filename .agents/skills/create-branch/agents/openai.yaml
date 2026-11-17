@@ -1,0 +1,4 @@
+interface:
+  display_name: "Accounta Create Branch"
+  short_description: "mainからバージョン別開発ブランチを作成・切替"
+  default_prompt: "$create-branch feature-v0.5"

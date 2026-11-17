@@ -1,0 +1,4 @@
+interface:
+  display_name: "Accounta Create Issue"
+  short_description: "現在のブランチからバージョンを判定してGitHub Issueを作成"
+  default_prompt: "$create-issue ダッシュボードのB/SをChart.jsで表示する"
