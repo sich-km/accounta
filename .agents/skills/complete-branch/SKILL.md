@@ -1,6 +1,6 @@
 ---
 name: complete-branch
-description: Codex workflow for Accounta version branches. Run `$complete-branch feature-v0.5` to review, test, stage and commit changes, push the version branch, and create or reuse a Pull Request targeting main. This skill ends after verifying the PR; it never merges the PR, switches to main, deletes a branch, or closes issues.
+description: Codex workflow for Accounta version branches. Run `$complete-branch v0.5` to review, test, stage and commit changes, push the version branch, and create or reuse a Pull Request targeting main. This skill ends after verifying the PR; it never merges the PR, switches to main, deletes a branch, or closes issues.
 ---
 
 # Accounta: Complete Version Branch
@@ -9,18 +9,18 @@ For the Accounta repository, complete the current version branch by creating a P
 
 ## Invocation
 
-- `$complete-branch feature-v0.5`
-- `$complete-branch feature-v1.0`
+- `$complete-branch v0.5`
+- `$complete-branch v1.0`
 - `$complete-branch v0.5`
 
-Accept one version `v<major>.<minor>[.<patch>]` or branch name `feature-v<major>.<minor>[.<patch>]`. Normalize `v0.5` to `feature-v0.5`, then require the normalized name to match the active branch exactly. Include an optional user-specified commit message or related issue numbers, if provided.
+Require one branch name matching `v<major>.<minor>[.<patch>]` and the active branch exactly. Use the input name unchanged. Include an optional user-specified commit message or related issue numbers, if provided.
 
 このスキルは、同じバージョンブランチでIssue追加・実装を重ね、利用者がリリースの区切りを指示したときに実行する。Issue件数から自動実行しない。このブランチをそのままmain向けPRのheadとし、別のリリース専用ブランチは作らない。
 
 ## 1. 操作前の確認
 
 1. `git rev-parse --show-toplevel`、`git remote get-url origin` で `sich-km/accounta` と確認する。`git branch --show-current` が指定ブランチに**完全一致**しない場合は停止。勝手に切り替えない。
-2. `git check-ref-format --branch <branch>` に加え、`feature-v<major>.<minor>[.<patch>]` 形式を検証する。`main`と`develop`では実行しない。
+2. `git check-ref-format --branch <branch>` に加え、`v<major>.<minor>[.<patch>]` 形式を検証する。`main`と`develop`では実行しない。
 3. `git fetch origin main`、`gh --version`、`gh auth status`、`gh repo view --json nameWithOwner` を確認する。mainがない、GitHub CLIを使えない、対象リポジトリが違う場合は **commit/push前に停止**。
 4. `git status --short --untracked-files=all`, `git diff --stat`, `git diff --cached --stat`, `git diff`, `git diff --cached`、必要なファイル内容を確認する。**ステージ対象を理解する**。
 5. `.env`、秘密鍵・トークン・認証情報、会社の機密情報、明らかに無関係な変更や生成物があればステージせず停止し、ユーザーに確認する。未追跡も含め `git add -A` を無条件で行わない。

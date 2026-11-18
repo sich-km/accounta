@@ -1,6 +1,6 @@
 ---
 name: complete-branch
-description: Accountaのバージョンブランチを確認・コミット・pushし、main向けPRを作成する。Cursorで「/complete-branch feature-v0.5」などと依頼されたときに使う。PR確認後に終了し、マージは行わない。
+description: Accountaのバージョンブランチを確認・コミット・pushし、main向けPRを作成する。Cursorで「/complete-branch v0.5」などと依頼されたときに使う。PR確認後に終了し、マージは行わない。
 ---
 
 # Accounta: Complete Version Branch (Cursor)
@@ -14,4 +14,4 @@ description: Accountaのバージョンブランチを確認・コミット・pu
 
 同じバージョンでIssue追加・実装を重ね、利用者がリリースの区切りを指示したときに実行する。未対応Issueを明記し、現在のバージョンブランチからmainへPRを作る。
 
-例: `/complete-branch v0.5`（`/complete-branch feature-v0.5` も可）
+例: `/complete-branch v0.5`

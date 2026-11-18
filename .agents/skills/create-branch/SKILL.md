@@ -1,45 +1,55 @@
 ---
 name: create-branch
-description: Accountaの次の開発バージョン用Gitブランチを準備するCodex用スキル。`$create-branch feature-v0.5`のように呼び出されたら、作業ツリーとリポジトリを確認し、最新のmainを基点にバージョン単位のブランチを作成・切替する。Issue単位ではブランチを作らず、同じバージョン内の複数Issueや自由な開発作業を一つのブランチで進める。
+description: AccountaのバージョンブランチをGitHubの最新mainから作成し、ローカルへ取得して追跡・切替する。$create-branch v0.5 のようにバージョン開発を開始するときに使う。
 ---
 
 # Accounta: Create Version Branch
 
-Accountaは **`main` + バージョン別開発ブランチ** で運用する。`develop` は使用しない。Git操作はCodexが現在開いている実際の作業ツリーに対して行う。
+ブランチ名は `v<major>.<minor>[.<patch>]`（例: `v0.5`、`v1.0.1`）とする。入力名をそのまま使い、接頭辞を追加しない。
+**GitHubでmainから作成 → fetch → ローカルの同名ブランチへ切替**の順序を守る。
+同じバージョンにIssueを随時追加し、このブランチからmainへPRを作る。Issue単位や別のリリース専用ブランチは作らない。
 
 ## 呼び出し
 
-- `$create-branch feature-v0.5`
-- `$create-branch feature-v0.6`
-- `$create-branch v0.5`
+`$create-branch v0.5`
 
-引数は `v<major>.<minor>[.<patch>]` または `feature-v<major>.<minor>[.<patch>]` を一つ受け取る。`v0.5` は `feature-v0.5` に正規化し、以後の確認・Git操作には正規化後の名前を使う。省略・不正な場合は確認する。Issue番号はブランチ名に含めない。
+省略・形式不正ならバージョンを確認する。このスキルはIssue・PR・タグを作成せず、mainへマージしない。
 
-この操作でバージョンの開発を開始し、その後にやることをIssueとして随時追加する。開始時点でIssueや実装範囲が決まっていなくてもよい。このブランチ自体をリリース単位として使い、別のリリース専用ブランチは作らない。Issue作成やPR作成はこのスキルでは行わない。
+## 事前確認
 
-## 操作前の安全確認
+1. `AGENTS.md` と `docs/Accounta_開発プロセス.md` を読み、現在の作業ツリーで操作する。
+2. `git rev-parse --show-toplevel`、`git remote get-url origin` で対象が `sich-km/accounta` であることを確認する。
+3. `git status --short --untracked-files=all` を確認し、未コミット変更があれば停止して報告する。自動stash・commit・reset・cleanは行わない。
+4. `git branch --show-current` と `git check-ref-format --branch <version>` で現在位置と名前を確認する。入力は上記のバージョン形式にも一致させ、シェルコードとして評価しない。
+5. `gh --version`、`gh auth status`、`gh repo view -R sich-km/accounta --json nameWithOwner` でCLI・認証・対象を確認する。取得失敗・権限不足なら後続処理を停止する。
+6. GitHubの `refs/heads/<version>` とローカル同名ブランチの有無を確認する。APIの404だけを「未作成」と扱い、認証・通信エラーを未作成扱いにしない。
+7. 既知の前バージョンPRが未マージで、その変更への依存がある場合は停止して報告する。勝手に別ブランチを基点にしない。
 
-1. `git rev-parse --show-toplevel` と `git remote get-url origin` を確認する。操作対象は `sich-km/accounta`。別リポジトリや不明なリモートなら停止する。
-2. `git status --short --untracked-files=all` で未コミット変更・未追跡ファイルがないことを確認する。あれば停止し、**自動 stash / reset / clean / commit をしない**。
-3. `git branch --show-current` と `git check-ref-format --branch <branch>` で状態と名前を確認する。ブランチ名は上記の形式にも合致させる。シェル引数は適切に引用し、ユーザー入力をコマンドとして評価しない。
-4. `git fetch origin main` でリモートのmainを取得する。失敗したら停止する。`git branch --list <branch>` と `git ls-remote --heads origin <branch>` で既存か確認する。
-5. `AGENTS.md` および `docs/Accounta_開発プロセス.md` があれば確認する。現行の本スキルとの矛盾があれば報告する。旧`develop`運用に自動的に戻さない。
+## GitHubで作成してからローカルへ取得
 
-## ブランチ作成・切替
+### リモートにない場合
 
-- **すでに指定ブランチ上**: 作り直さず状態確認して終了。
-- **ローカルに既存ブランチあり**: `git switch <branch>`。自動リセット・リベース・マージをしない。
-- **originだけに既存ブランチあり**: `git fetch origin <branch>`、追跡設定付きで `git switch --track origin/<branch>`。履歴は書き換えない。
-- **どちらにもない新規ブランチ**:
-  1. `git switch main`。別worktreeで使われているなど失敗時は停止。
-  2. `git status --short --untracked-files=all` を再確認。
-  3. `git rev-list --count origin/main..main` が0であることを確認する。ローカルmainだけにコミットがある場合は停止し、勝手に変更しない。
-  4. `git pull --ff-only origin main` で最新mainに更新する。fast-forwardできなければ停止。
-  5. `git switch -c <branch>` で作成・切替。**pushはしない**。
+1. ローカルにだけ同名ブランチがあれば、勝手にpush・削除せず状態を報告して方針を確認する。
+2. `gh api repos/sich-km/accounta/git/ref/heads/main --jq .object.sha` でGitHubの最新mainのSHAを取得する。ローカルmainやタグを基点にしない。
+3. `gh api --method POST repos/sich-km/accounta/git/refs -f ref=refs/heads/<version> -f sha=<main-sha>` でGitHubに作成する。ユーザーのcreate-branch依頼はこのリモート作成を含む。
+4. APIで作成結果のrefとSHAを確認する。応答が不明な場合はリモートの有無を再確認し、既存ブランチを上書きしない。
 
-## 作成時の留意事項
+### リモートに既存の場合
 
-- 同じバージョン内の複数Issueをこのブランチで実装できる。Issue作成時は `$create-issue <内容>` を使い、現在のブランチ名からバージョンを付与する。
-- **直前バージョンのPRが未マージなら、新しいブランチをmainから作るとその開発内容を引き継がない**。新規ブランチ作成前に既知の未マージPRがあれば確認し、連続リリースとして先行版に依存する場合は作成を止めて報告する。無断で未マージの開発ブランチを基点にしない。
-- `git branch --show-current`, `git status -sb`, `git log -1 --oneline` で結果を検証し、ブランチ名・新規か既存か・基点・作業ツリー状態を報告する。
-- main、他ブランチ、Issueを勝手に書き換えない。作業ツリーが別worktreeやクラウドなら、ユーザーのWindowsローカル環境が同時に切り替わると主張しない。
+既存ブランチを再利用する。mainへリセットしたり、履歴を書き換えたりしない。
+
+### 取得・切替
+
+1. `git fetch origin refs/heads/<version>:refs/remotes/origin/<version>` で取得する。失敗したら停止する。
+2. ローカルに未作成なら `git switch --track origin/<version>` で同名ブランチを作成・切替する。ローカル先行の `git switch -c` は使わない。
+3. ローカルに既存なら `git switch <version>` し、upstreamを確認する。未設定なら `git branch --set-upstream-to=origin/<version> <version>` を設定する。異なるupstreamなら報告して停止する。
+4. 既存ローカルがリモートより遅れているだけなら `git merge --ff-only origin/<version>` で揃える。ローカル先行・分岐の場合は自動push・rebase・resetをせず差分を報告する。
+
+各変更操作の成功を確認してから次へ進む。途中で失敗しても、作成済みリモートブランチを自動削除しない。
+
+## 結果確認
+
+- `git branch --show-current`、`git status -sb`、`git log -1 --oneline`、upstreamとリモートrefを確認する。
+- 新規の場合はGitHub作成時のmainのSHAと、リモート・ローカルのバージョンブランチのSHAが一致することを確認する。
+- GitHubでの新規作成／再利用、現在のブランチ、基点、追跡先、作業ツリー状態を報告する。別worktreeを変更したと主張しない。
+- 続けて `$create-issue <やること>` で対象バージョンにIssueを追加できることを案内する。
