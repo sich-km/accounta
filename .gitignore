@@ -7,7 +7,6 @@
 .phpunit.result.cache
 /.codex/*
 !/.codex/config.toml
-/.cursor/
 /.idea
 /.nova
 /.phpunit.cache
