@@ -11,4 +11,6 @@ description: Accountaのバージョン別開発ブランチを最新mainから�
 - 操作対象はCursorで開いている実際のリポジトリ・作業ツリーとする。
 - `AGENTS.md` と `docs/Accounta_開発プロセス.md` を確認する。未コミット変更は保持し、共通手順の停止条件を守る。
 
-例: `/create-branch feature-v0.5`
+最初に `/create-branch v0.5` で `feature-v0.5` を開始し、その後 `/create-issue <やること>` でIssueを随時追加する。開始時点でIssueがなくてもよい。
+
+例: `/create-branch v0.5`（`/create-branch feature-v0.5` も可）

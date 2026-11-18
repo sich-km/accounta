@@ -12,4 +12,6 @@ description: Accountaのバージョンブランチを確認・コミット・pu
 - `AGENTS.md` のテスト実行制限を優先する。テスト実行が未承認なら、共通手順で必要な検証について実行指示を求め、コミット・push・PR作成前で停止する。
 - PRのbaseは `main`。PRの存在を確認したら終了し、現在のバージョンブランチを維持する。PRマージ、mainへの切替、ブランチ削除、IssueのCloseは行わない。
 
-例: `/complete-branch feature-v0.5`
+同じバージョンでIssue追加・実装を重ね、利用者がリリースの区切りを指示したときに実行する。未対応Issueを明記し、現在のバージョンブランチからmainへPRを作る。
+
+例: `/complete-branch v0.5`（`/complete-branch feature-v0.5` も可）

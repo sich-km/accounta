@@ -11,7 +11,9 @@ Accountaは個人開発・技術検証を前提とし、管理負担を最小限
 | ブランチ | 用途 |
 |---|---|
 | `main` | 安定版・統合済みコード。直接コミット・pushしない。 |
-| `feature-v0.5`、`feature-v0.6`など | **バージョン単位**の開発。複数Issue・改修を同じブランチで進める。 |
+| `feature-v0.5`、`feature-v0.6`など | **バージョン単位の開発・リリース用ブランチ**。複数Issue・改修を同じブランチで進め、まとまった時点でmain向けPRを作る。 |
+
+最初にバージョンブランチを作り、その後でやることをIssueとして随時追加する。開始時点で全Issueやリリース範囲を決める必要はない。既存の命名に合わせて `feature-vX.Y` を使い、別のリリース専用ブランチは作らない。
 
 次のバージョンを開始する際は、原則として**前バージョンのPRがmainにマージ済み**であることを確認する。そうしないと新しいブランチへ前バージョンの変更が引き継がれない。
 
@@ -24,22 +26,27 @@ Issueは機能追加・改善・不具合などを必要時に登録する。**I
 - 現在のバージョンが未決定なら、Issue登録時に明示する。GitHub Milestonesは必要になったときだけ使う。
 - Issueは個別に作成・更新できるが、コードをmainへ統合する単位はバージョン別PRとする。
 
-## 4. Codexの基本操作
+## 4. Codex・Cursorの基本操作
+
+Codexでは次の順序で操作する。
 
 ```text
-$create-branch feature-v0.5
+$create-branch v0.5
 $create-issue ダッシュボードのB/SをChart.jsで表示する
-（Codexに機能実装や修正を依頼し、必要に応じてコミットする）
 $create-issue 固定資産一覧を改善する
-（同じfeature-v0.5ブランチで続けて開発）
-$complete-branch feature-v0.5
+（feature-v0.5で実装・検証・コミットし、必要なIssueを随時追加する）
+（リリースできる変更がまとまったら）
+$complete-branch v0.5
 ```
 
-- `$create-branch` は作業状態を確認し、**最新mainを基点**としてバージョンブランチを作成・切替する。
-- `$create-issue` は現在の`feature-vX.Y`から対象バージョンを判定してIssueを作る。ブランチ変更はしない。
-- `$complete-branch` checks changes and tests, stages and commits approved files, pushes the version branch, and creates a PR targeting `main`. It stops after PR verification and leaves the local version branch checked out.
-- `$complete-branch` does not merge the PR, close issues, or switch branches.
+- `$create-branch v0.5` は作業状態を確認し、**最新mainを基点**として `feature-v0.5` を作成・切替する。`$create-branch feature-v0.5` も使える。
+- `$create-issue <やること>` は現在の `feature-vX.Y` からバージョンを判定し、`[vX.Y] 対応内容` のIssueを追加する。Issue登録だけでは実装は開始しない。バージョンだけの指定はIssueの内容にならない。
+- `$complete-branch v0.5` は差分・検証結果を確認し、対象変更をコミット・pushして `feature-v0.5` → `main` のPRを作成する。`$complete-branch feature-v0.5` も使える。実行は利用者がリリースの区切りを指示したときとし、Issue数による自動実行はしない。
+- PRには含めた変更と関連Issueをまとめ、未対応Issueがあれば明記する。全Issueの完了をPR作成の条件にはせず、未対応Issueを完了扱いにしない。
+- `$complete-branch` はPR確認後に終了する。PRのマージ、IssueのClose、ブランチ切替は行わない。
 - PRを確認・マージした後、関連IssueをClosedにし、次バージョンを開始する。ブランチ削除は必要に応じて手動で行う。
+
+Cursorでは同じ順序で `/create-branch v0.5`、`/create-issue <やること>`、`/complete-branch v0.5` を使う。詳細手順は `.agents/skills/` を共通の参照先とし、`.cursor/skills/` から読み込む。
 
 ## 5. リリース・品質
 

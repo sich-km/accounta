@@ -11,8 +11,11 @@ Accountaは **`main` + バージョン別開発ブランチ** で運用する。
 
 - `$create-branch feature-v0.5`
 - `$create-branch feature-v0.6`
+- `$create-branch v0.5`
 
-引数は `feature-v<major>.<minor>[.<patch>]` 形式のブランチ名を一つ受け取る。例: `feature-v0.5`、`feature-v1.0`、`feature-v1.0.1`。省略・不正な場合は確認する。Issue番号はブランチ名に含めない。
+引数は `v<major>.<minor>[.<patch>]` または `feature-v<major>.<minor>[.<patch>]` を一つ受け取る。`v0.5` は `feature-v0.5` に正規化し、以後の確認・Git操作には正規化後の名前を使う。省略・不正な場合は確認する。Issue番号はブランチ名に含めない。
+
+この操作でバージョンの開発を開始し、その後にやることをIssueとして随時追加する。開始時点でIssueや実装範囲が決まっていなくてもよい。このブランチ自体をリリース単位として使い、別のリリース専用ブランチは作らない。Issue作成やPR作成はこのスキルでは行わない。
 
 ## 操作前の安全確認
 

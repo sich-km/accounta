@@ -11,8 +11,11 @@ For the Accounta repository, complete the current version branch by creating a P
 
 - `$complete-branch feature-v0.5`
 - `$complete-branch feature-v1.0`
+- `$complete-branch v0.5`
 
-Require one branch name matching `feature-v<major>.<minor>[.<patch>]`, matching the active branch exactly. Include an optional user-specified commit message or related issue numbers, if provided.
+Accept one version `v<major>.<minor>[.<patch>]` or branch name `feature-v<major>.<minor>[.<patch>]`. Normalize `v0.5` to `feature-v0.5`, then require the normalized name to match the active branch exactly. Include an optional user-specified commit message or related issue numbers, if provided.
+
+このスキルは、同じバージョンブランチでIssue追加・実装を重ね、利用者がリリースの区切りを指示したときに実行する。Issue件数から自動実行しない。このブランチをそのままmain向けPRのheadとし、別のリリース専用ブランチは作らない。
 
 ## 1. 操作前の確認
 
@@ -26,9 +29,10 @@ Require one branch name matching `feature-v<major>.<minor>[.<patch>]`, matching 
 
 ## 2. 実装・テスト・差分確認
 
-1. 変更内容に適したテスト・静的解析・ビルドを実行する。Laravelなら該当テストまたは利用可能な `php artisan test` 等を検討する。失敗時は**commit/push/PR作成を停止**し、失敗内容を報告する。実行不能の場合は結果を捏造せず、検証省略には利用者の明示的指示を必要とする。
+1. `AGENTS.md` のテスト実行制限に従い、変更内容に適した検証を行う。自動テストは利用者の明示的な実行指示がある場合に実行する。指示がなく必要なテスト結果も確認できない場合は、テスト実行または省略の指示を求め、commit/push/PR作成前で停止する。失敗時も停止して結果を報告し、未実行を成功扱いにしない。
 2. `git log --oneline origin/main..HEAD` と `git diff --stat origin/main...HEAD` でPRに含まれる変更を確認する。予期しないコミットやmainとの差分があれば停止し、勝手にrebase・mergeしない。
 3. 今回のバージョンに関するIssueが複数あれば、PR本文に関連番号をまとめる。Issueが見つからない場合も勝手に作らない。
+4. 対象バージョンのIssueと実際の差分を照合し、PRに含む対応と未対応Issueを区別する。全Issueの完了はPR作成の必須条件にしない。未対応IssueはPR本文へ残し、勝手にClose・別バージョンへ変更しない。
 
 ## 3. Stage・Commit・Push
 
